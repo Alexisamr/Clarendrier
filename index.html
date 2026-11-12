@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="Clarendrier ✨">
   <meta name="theme-color" content="#1a0b12">
   
-  <!-- Manifest et Icônes pour l'écran d'accueil (le ?v=2 vide le cache du téléphone) -->
+  <!-- Manifest et Icônes pour l'écran d'accueil -->
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/assets/icon.png?v=2">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon.png?v=2">
@@ -29,6 +29,28 @@
   <!-- Effet de neige en arrière-plan -->
   <canvas id="snow-canvas"></canvas>
 
+  <!-- ÉCRAN DE MOT DE PASSE SECRET -->
+  <div id="auth-overlay" class="auth-overlay">
+    <div id="auth-card" class="auth-card">
+      <div class="auth-icon">🔒</div>
+      <h2>Accès Privé ✨</h2>
+      <p class="auth-question">Quelle est ma couleur préférée ?</p>
+      <form id="auth-form">
+        <input 
+          type="text" 
+          id="auth-input" 
+          placeholder="Ta réponse..." 
+          autocomplete="off" 
+          autocorrect="off" 
+           required
+        >
+        <button type="submit" class="auth-btn">Déverrouiller ❤️</button>
+      </form>
+      <p id="auth-error" class="auth-error hidden">Mauvaise réponse... réfléchis bien ! 😘</p>
+    </div>
+  </div>
+
+  <!-- CONTENU PRINCIPAL DU CLARENDRIER -->
   <main class="app-container">
     <header class="header">
       <span class="badge">Édition Spéciale ✨</span>

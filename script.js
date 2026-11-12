@@ -5,15 +5,60 @@
 const DEV_MODE = true;
 
 // =========================================================
+// GESTION DU MOT DE PASSE SECRET ("bleu" ou "le bleu")
+// =========================================================
+const AUTH_STORAGE_KEY = "clarendrier_unlocked_2026";
+const authOverlay = document.getElementById("auth-overlay");
+const authCard = document.getElementById("auth-card");
+const authForm = document.getElementById("auth-form");
+const authInput = document.getElementById("auth-input");
+const authError = document.getElementById("auth-error");
+
+// Si elle a déjà trouvé le mot de passe une fois sur son téléphone, on masque l'écran direct
+if (localStorage.getItem(AUTH_STORAGE_KEY) === "true") {
+  authOverlay.classList.add("hidden");
+}
+
+authForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  
+  // Nettoie les espaces et met tout en minuscule pour accepter "Bleu", "bleu", "le bleu", "Le Bleu"
+  const userAnswer = authInput.value.trim().toLowerCase();
+  const validAnswers = ["bleu", "le bleu"];
+
+  if (validAnswers.includes(userAnswer)) {
+    localStorage.setItem(AUTH_STORAGE_KEY, "true");
+    authOverlay.classList.add("hidden");
+    authError.classList.add("hidden");
+
+    if (typeof confetti === "function") {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#f5d08a", "#ff6b8b", "#ffffff"]
+      });
+    }
+  } else {
+    // Mauvaise réponse : secousse + petit message
+    authError.classList.remove("hidden");
+    authCard.classList.remove("shake");
+    void authCard.offsetWidth;
+    authCard.classList.add("shake");
+    authInput.value = "";
+  }
+});
+
+// =========================================================
 // CONTENU DES 24 JOURS (Tu n'as plus qu'à personnaliser ça)
 // =========================================================
 const calendarData = [
   {
     day: 1,
     title: "Joyeux 1er Décembre ❤️",
-    image: "assets/icon.webp", // Remplace par "assets/jour1.webp" quand tu veux
+    image: "assets/icon.webp",
     coupon: "",
-    text: "Bienvenue dans ton calendrier de l'Avent sur-mesure ! Chaque matin jusqu'à Noël, tu pourras débloquer une nouvelle case ici."
+    text: "Bienvenue dans ton Clarendrier sur-mesure ! Chaque matin jusqu'à Noël, tu pourras débloquer une nouvelle case ici."
   },
   {
     day: 2,
@@ -28,8 +73,7 @@ const calendarData = [
     image: "",
     coupon: "",
     text: "Ajoute ici une photo de vous deux et une petite anecdote sur ce moment."
-  },
-  // Les jours 4 à 24 se génèrent automatiquement ci-dessous si tu ne les as pas encore remplis
+  }
 ];
 
 // Complète automatiquement jusqu'à 24 pour que ta grille soit complète tout de suite
@@ -93,7 +137,7 @@ function renderGrid() {
 function handleCardClick(item, cardElement) {
   if (!canOpenDay(item.day)) {
     cardElement.classList.remove("shake");
-    void cardElement.offsetWidth; // Relance l'animation CSS
+    void cardElement.offsetWidth;
     cardElement.classList.add("shake");
 
     const now = new Date();
@@ -105,7 +149,6 @@ function handleCardClick(item, cardElement) {
     return;
   }
 
-  // Première ouverture : confettis + sauvegarde
   if (!openedDays.includes(item.day)) {
     openedDays.push(item.day);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(openedDays));

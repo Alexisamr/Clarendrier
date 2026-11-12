@@ -1,33 +1,101 @@
 // =========================================================
 // MODE TEST : Laisse sur "true" pendant que tu crées le site.
-// Passe-le sur "false" juste avant le 1er décembre !
+// Passe-le sur "false" le 30 novembre !
 // =========================================================
 const DEV_MODE = true;
+// En mode test, choisis quel jour tu veux simuler pour tester sa question (de 1 à 24) :
+const SIMULATED_DAY = 1;
 
 // =========================================================
-// GESTION DU MOT DE PASSE SECRET ("bleu" ou "le bleu")
+// CONTENU ET QUESTION DE CHAQUE JOUR (1 à 24)
 // =========================================================
-const AUTH_STORAGE_KEY = "clarendrier_unlocked_2026";
+const calendarData = [
+  {
+    day: 1,
+    question: "Quelle est ma couleur préférée ?",
+    answers: ["bleu", "le bleu"], // Toutes les variantes acceptées (en minuscules)
+    subtitle: "Joyeux 1er décembre mon amour ❤️", // Change aussi le sous-titre de la page !
+    title: "Joyeux 1er Décembre ❤️",
+    image: "assets/icon.webp",
+    coupon: "",
+    text: "Bienvenue dans ton Clarendrier sur-mesure ! Chaque matin jusqu'à Noël, une nouvelle question et une nouvelle surprise t'attendent ici."
+  },
+  {
+    day: 2,
+    question: "Quel est le prénom de la plus belle copine du monde ?",
+    answers: ["clara", "moi", "c'est moi"],
+    subtitle: "Jour 2 : Déjà accro au Clarendrier ? ✨",
+    title: "Bon Cadeau Spécial 🎟️",
+    image: "",
+    coupon: "BON POUR : Un massage de 20 minutes (sans râler)",
+    text: "Prends une capture d'écran de ce bon, tu peux l'utiliser quand tu veux ce mois-ci !"
+  },
+  {
+    day: 3,
+    question: "Dans quel mois on s'est mis ensemble ?",
+    answers: ["janvier", "en janvier"], // Adapte avec votre vrai mois !
+    subtitle: "Encore 21 dodos avant Noël 🎄",
+    title: "Un de mes souvenirs préférés",
+    image: "",
+    coupon: "",
+    text: "Ajoute ici une photo de vous deux et une petite anecdote sur ce moment."
+  }
+];
+
+// Complète automatiquement les jours 4 à 24 avec une question par défaut
+for (let i = calendarData.length + 1; i <= 24; i++) {
+  calendarData.push({
+    day: i,
+    question: "Quelle est ma couleur préférée ?",
+    answers: ["bleu", "le bleu"],
+    subtitle: `Jour ${i} : Une petite surprise t'attend ❤️`,
+    title: i === 24 ? "Joyeux Réveillon mon amour ✨" : `Surprise du ${i} Décembre`,
+    image: "",
+    coupon: i === 10 ? "BON POUR : Soirée resto ou film de ton choix" : "",
+    text: `Contenu du jour ${i} à venir... ❤️`
+  });
+}
+
+// =========================================================
+// DÉTECTION DU JOUR ACTUEL & ÉNIGME DU JOUR
+// =========================================================
+function getActiveDayNumber() {
+  if (DEV_MODE) return SIMULATED_DAY;
+  const now = new Date();
+  if (now.getMonth() === 11) {
+    return Math.min(now.getDate(), 24); // Entre 1 et 24 en décembre
+  }
+  return 1; // Avant décembre, prépare le jour 1
+}
+
+const activeDayNum = getActiveDayNumber();
+const todayConfig = calendarData.find((d) => d.day === activeDayNum) || calendarData[0];
+
+// Met à jour le sous-titre de la page principale selon le jour
+document.getElementById("daily-subtitle").textContent = todayConfig.subtitle;
+
+// Gestion du déverrouillage quotidien (une clé par jour : ex "clarendrier_auth_day_1")
+const DAILY_AUTH_KEY = `clarendrier_auth_day_${activeDayNum}`;
 const authOverlay = document.getElementById("auth-overlay");
 const authCard = document.getElementById("auth-card");
 const authForm = document.getElementById("auth-form");
 const authInput = document.getElementById("auth-input");
 const authError = document.getElementById("auth-error");
 
-// Si elle a déjà trouvé le mot de passe une fois sur son téléphone, on masque l'écran direct
-if (localStorage.getItem(AUTH_STORAGE_KEY) === "true") {
+document.getElementById("auth-day-badge").textContent = `Énigme du ${activeDayNum} Décembre`;
+document.getElementById("auth-question").textContent = todayConfig.question;
+
+// Si elle a déjà répondu à la question d'AUJOURD'HUI, on masque l'écran
+if (localStorage.getItem(DAILY_AUTH_KEY) === "true") {
   authOverlay.classList.add("hidden");
 }
 
 authForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  
-  // Nettoie les espaces et met tout en minuscule pour accepter "Bleu", "bleu", "le bleu", "Le Bleu"
   const userAnswer = authInput.value.trim().toLowerCase();
-  const validAnswers = ["bleu", "le bleu"];
 
-  if (validAnswers.includes(userAnswer)) {
-    localStorage.setItem(AUTH_STORAGE_KEY, "true");
+  if (todayConfig.answers.includes(userAnswer)) {
+    localStorage.setItem(DAILY_AUTH_KEY, "true");
     authOverlay.classList.add("hidden");
     authError.classList.add("hidden");
 
@@ -40,7 +108,6 @@ authForm.addEventListener("submit", (e) => {
       });
     }
   } else {
-    // Mauvaise réponse : secousse + petit message
     authError.classList.remove("hidden");
     authCard.classList.remove("shake");
     void authCard.offsetWidth;
@@ -48,44 +115,6 @@ authForm.addEventListener("submit", (e) => {
     authInput.value = "";
   }
 });
-
-// =========================================================
-// CONTENU DES 24 JOURS (Tu n'as plus qu'à personnaliser ça)
-// =========================================================
-const calendarData = [
-  {
-    day: 1,
-    title: "Joyeux 1er Décembre ❤️",
-    image: "assets/icon.webp",
-    coupon: "",
-    text: "Bienvenue dans ton Clarendrier sur-mesure ! Chaque matin jusqu'à Noël, tu pourras débloquer une nouvelle case ici."
-  },
-  {
-    day: 2,
-    title: "Bon Cadeau Spécial 🎟️",
-    image: "",
-    coupon: "BON POUR : Un massage de 20 minutes (sans râler)",
-    text: "Prends une capture d'écran de ce bon, tu peux l'utiliser quand tu veux ce mois-ci !"
-  },
-  {
-    day: 3,
-    title: "Un de mes souvenirs préférés",
-    image: "",
-    coupon: "",
-    text: "Ajoute ici une photo de vous deux et une petite anecdote sur ce moment."
-  }
-];
-
-// Complète automatiquement jusqu'à 24 pour que ta grille soit complète tout de suite
-for (let i = calendarData.length + 1; i <= 24; i++) {
-  calendarData.push({
-    day: i,
-    title: i === 24 ? "Joyeux Réveillon mon amour ✨" : `Surprise du ${i} Décembre`,
-    image: "",
-    coupon: i === 10 ? "BON POUR : Soirée resto ou film de ton choix" : "",
-    text: `Contenu du jour ${i} à venir... ❤️`
-  });
-}
 
 // =========================================================
 // LOGIQUE DU CALENDRIER ET SAUVEGARDE IPHONE (localStorage)
@@ -101,7 +130,7 @@ const toast = document.getElementById("toast");
 function canOpenDay(dayNumber) {
   if (DEV_MODE) return true;
   const now = new Date();
-  const isDecember = now.getMonth() === 11; // 11 = Décembre en JS
+  const isDecember = now.getMonth() === 11;
   return isDecember && now.getDate() >= dayNumber;
 }
 
@@ -188,6 +217,34 @@ function openModal(item) {
 closeModalBtn.addEventListener("click", () => modalOverlay.classList.add("hidden"));
 modalOverlay.addEventListener("click", (e) => {
   if (e.target === modalOverlay) modalOverlay.classList.add("hidden");
+});
+
+// =========================================================
+// BOUTON DE RÉINITIALISATION (MODE TEST UNIQUEMENT)
+// =========================================================
+const devToolbar = document.getElementById("dev-toolbar");
+const resetBtn = document.getElementById("reset-btn");
+
+if (DEV_MODE) {
+  devToolbar.classList.remove("hidden");
+  resetBtn.addEventListener("click", () => {
+    localStorage.clear();
+    window.location.reload();
+  });
+}
+
+// =========================================================
+// VÉRIFICATION AUTO DES MISES À JOUR SUR L'APP IPHONE
+// =========================================================
+// Quand elle rouvre l'app depuis son écran d'accueil iPhone le matin,
+// on vérifie si le jour a changé pour afficher la nouvelle question !
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    const newDay = getActiveDayNumber();
+    if (newDay !== activeDayNum) {
+      window.location.reload();
+    }
+  }
 });
 
 // =========================================================

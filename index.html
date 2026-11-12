@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  
+  <!-- Mode plein écran App iOS (iPhone 13) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Décembre ✨">
+  
+  <!-- Icône (garde une version .png pour l'écran d'accueil iOS, ou mets .webp pour tester sur PC) -->
+  <link rel="apple-touch-icon" href="assets/icon.png">
+  <link rel="icon" type="image/webp" href="assets/icon.webp">
+
+  <title>24 Jours avant Noël ✨</title>
+  
+  <!-- Police élégante Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Effet de neige en arrière-plan -->
+  <canvas id="snow-canvas"></canvas>
+
+  <main class="app-container">
+    <header class="header">
+      <span class="badge">Édition Spéciale ✨</span>
+      <h1>Ton Calendrier de l'Avent</h1>
+      <p class="subtitle">Une petite surprise par jour jusqu'à Noël ❤️</p>
+    </header>
+
+    <!-- Grille des 24 cases générée par le JS -->
+    <section id="calendar-grid" class="calendar-grid"></section>
+  </main>
+
+  <!-- Pop-up (Modale) quand elle ouvre une case -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <button id="close-modal" class="close-btn" aria-label="Fermer">&times;</button>
+      <div class="modal-day-badge" id="modal-day">Jour 1</div>
+      <h2 id="modal-title">Titre de la surprise</h2>
+      <div id="modal-media-container" class="modal-media"></div>
+      <p id="modal-text">Message du jour...</p>
+    </div>
+  </div>
+
+  <!-- Petit message (Toast) si elle clique trop tôt -->
+  <div id="toast" class="toast hidden">Patience... cette case n'est pas encore débloquée ! 🎄</div>
+
+  <!-- Librairie légère pour les confettis -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

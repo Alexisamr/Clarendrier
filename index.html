@@ -4,16 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   
-  <!-- Mode plein écran App iOS (iPhone 13) -->
+  <!-- Mode plein écran App iOS (iPhone 13) et Android -->
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Décembre ✨">
+  <meta name="apple-mobile-web-app-title" content="Clarendrier ✨">
+  <meta name="theme-color" content="#1a0b12">
   
-  <!-- Icône (garde une version .png pour l'écran d'accueil iOS, ou mets .webp pour tester sur PC) -->
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="/assets/icon.png">
+  <!-- Manifest et Icônes pour l'écran d'accueil (le ?v=2 vide le cache du téléphone) -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/assets/icon.png?v=2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon.png?v=2">
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/icon.png?v=2">
 
-  <title>24 Jours avant Noël ✨</title>
+  <title>Clarendrier ✨</title>
   
   <!-- Police élégante Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -28,7 +32,7 @@
   <main class="app-container">
     <header class="header">
       <span class="badge">Édition Spéciale ✨</span>
-      <h1>Ton Calendrier de l'Avent</h1>
+      <h1>Ton Clarendrier</h1>
       <p class="subtitle">Une petite surprise par jour jusqu'à Noël ❤️</p>
     </header>
 

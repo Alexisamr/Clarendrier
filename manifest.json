@@ -1,0 +1,21 @@
+{
+  "name": "Clarendrier",
+  "short_name": "Clarendrier ✨",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a0b12",
+  "theme_color": "#1a0b12",
+  "icons": [
+    {
+      "src": "/assets/icon.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icon.png?v=2",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

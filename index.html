@@ -1,100 +1,58 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  
-  <!-- Empêche l'iPhone de garder une vieille version en cache -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+    <meta charset="UTF-8">
+    <!-- Optimisation iPhone 13 : gestion de l'encoche (viewport-fit=cover) et blocage du zoom accidentel -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Configuration Web App iOS (Écran d'accueil) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Calendrier">
+    <link rel="apple-touch-icon" href="assets/icon.png">
+    
+    <!-- Manifest PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FAF8F5">
 
-  <!-- Mode plein écran App iOS (iPhone 13) et Android -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Clarendrier ✨">
-  <meta name="theme-color" content="#1a0b12">
-  
-  <!-- Manifest et Icônes pour l'écran d'accueil -->
-  <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/assets/icon.png?v=3">
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon.png?v=3">
-  <link rel="icon" type="image/png" sizes="512x512" href="/assets/icon.png?v=3">
+    <title>Calendrier de l'Avent</title>
 
-  <title>Clarendrier ✨</title>
-  
-  <!-- Police élégante Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  
-  <link rel="stylesheet" href="style.css">
+    <!-- Typographies sobres : Cormorant Garamond (Titres/Chiffres) & Inter (Texte) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Effet de neige en arrière-plan -->
-  <canvas id="snow-canvas"></canvas>
+    <main class="app-container">
+        <header class="header">
+            <span class="subtitle">Décembre</span>
+            <h1 class="title">En attendant Noël</h1>
+            <p class="progress-text" id="progress-text">0 sur 24 découverts</p>
+        </header>
 
-  <!-- ÉCRAN D'ÉNIGME QUOTIDIENNE -->
-  <div id="auth-overlay" class="auth-overlay">
-    <div id="auth-card" class="auth-card">
-      <div class="auth-icon">🔒</div>
-      <div id="auth-day-badge" class="modal-day-badge">Énigme du jour</div>
-      <h2>Accès Privé ✨</h2>
-      <p id="auth-question" class="auth-question">Quelle est ma couleur préférée ?</p>
-      <form id="auth-form">
-        <input 
-          type="text" 
-          id="auth-input" 
-          placeholder="Ta réponse..." 
-          autocomplete="off" 
-          autocorrect="off" 
-          required
-        >
-        <button type="submit" class="auth-btn">Déverrouiller ❤️</button>
-      </form>
-      <p id="auth-error" class="auth-error hidden">Mauvaise réponse... réfléchis bien ! 😘</p>
+        <!-- Grille des 24 jours générée par JS -->
+        <section class="calendar-grid" id="calendar-grid"></section>
+    </main>
+
+    <!-- Fenêtre modale (tiroir bas style iOS) pour afficher le contenu d'une case -->
+    <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="modal-close" aria-label="Fermer">&times;</button>
+            <div class="modal-content">
+                <span class="modal-day" id="modal-day">Jour 1</span>
+                <h2 class="modal-title" id="modal-title">Titre du jour</h2>
+                <div class="modal-body" id="modal-body">Contenu du jour...</div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <!-- CONTENU PRINCIPAL DU CLARENDRIER -->
-  <main class="app-container">
-    <header class="header">
-      <span class="badge">Édition Spéciale ✨</span>
-      <h1 id="daily-main-title">Ton Clarendrier</h1>
-      <p id="daily-subtitle" class="subtitle">Une petite surprise par jour jusqu'à Noël ❤️</p>
-    </header>
+    <!-- Notification discrète si la case est encore verrouillée -->
+    <div class="toast" id="toast">Patience...</div>
 
-    <!-- Grille des 24 cases générée par le JS -->
-    <section id="calendar-grid" class="calendar-grid"></section>
-
-    <!-- Bouton de test (s'affiche uniquement quand DEV_MODE = true) -->
-    <div id="dev-toolbar" class="dev-toolbar hidden">
-      <button id="reset-btn" class="reset-btn">🔄 Réinitialiser mes tests (Mot de passe + Cases)</button>
-    </div>
-  </main>
-
-  <!-- Pop-up (Modale) quand elle ouvre une case -->
-  <div id="modal-overlay" class="modal-overlay hidden">
-    <div class="modal-card">
-      <button id="close-modal" class="close-btn" aria-label="Fermer">&times;</button>
-      <div class="modal-day-badge" id="modal-day">Jour 1</div>
-      <h2 id="modal-title">Titre de la surprise</h2>
-      <div id="modal-media-container" class="modal-media"></div>
-      <p id="modal-text">Message du jour...</p>
-    </div>
-  </div>
-
-  <!-- Petit message (Toast) si elle clique trop tôt -->
-  <div id="toast" class="toast hidden">Patience... cette case n'est pas encore débloquée ! 🎄</div>
-
-  <!-- Librairie légère pour les confettis -->
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  
-  <!-- Charge script.js en contournant le cache de l'iPhone à chaque ouverture -->
-  <script>
-    const script = document.createElement('script');
-    script.src = 'script.js?t=' + new Date().getTime();
-    document.body.appendChild(script);
-  </script>
+    <script src="script.js"></script>
 </body>
 </html>

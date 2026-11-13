@@ -101,7 +101,6 @@ function openModal(item) {
 
     if (item.game === 'ferret') {
         if (hasWon) {
-            // Si elle a déjà gagné, on affiche le vrai message + la box en dessous pour rejouer
             const msgDiv = document.createElement('div');
             msgDiv.style.marginBottom = '18px';
             msgDiv.innerHTML = item.content;
@@ -114,7 +113,6 @@ function openModal(item) {
             modalBody.appendChild(introP);
         }
 
-        // Création de la petite box du jeu qui lance le plein écran au clic
         const launchBox = document.createElement('div');
         launchBox.className = 'game-launch-box';
         launchBox.innerHTML = `
@@ -166,7 +164,6 @@ function launchFullscreenFerretGame(item) {
     const canvas = document.getElementById('ferret-canvas');
     const ctx = canvas.getContext('2d');
 
-    // Calibration Retina pour iPhone 13
     let width = window.innerWidth;
     let height = window.innerHeight;
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -192,7 +189,6 @@ function launchFullscreenFerretGame(item) {
     let runCycle = 0;
     let screenShake = 0;
 
-    // Position de la joueuse (-1 = gauche du chemin, 0 = centre, +1 = droite)
     const player = {
         lanePos: 0,
         targetLanePos: 0,
@@ -219,10 +215,9 @@ function launchFullscreenFerretGame(item) {
         { emoji: '🧁', label: 'Canelé +14% ✨', penalty: +14, speed: 0.44, bonus: true, color: '#F4A261' }
     ];
 
-    // Contrôles fluides au doigt ou à la souris
     function updateTargetFromX(clientX) {
         fsHint.style.opacity = '0';
-        const norm = (clientX / width) * 2 - 1; // -1 à +1
+        const norm = (clientX / width) * 2 - 1;
         player.targetLanePos = Math.max(-0.85, Math.min(0.85, norm * 1.15));
     }
 
@@ -248,8 +243,8 @@ function launchFullscreenFerretGame(item) {
         const type = pool[Math.floor(Math.random() * pool.length)];
 
         obstacles.push({
-            lane: (Math.random() * 1.5) - 0.75, // Position latérale sur le chemin
-            progress: 0.02, // 0 = crête de la dune, 1 = tout en bas
+            lane: (Math.random() * 1.5) - 0.75,
+            progress: 0.02,
             ...type
         });
     }
@@ -269,7 +264,6 @@ function launchFullscreenFerretGame(item) {
         }
     }
 
-    // Interpolation de couleur pour le coucher de soleil
     function lerpColor(c1, c2, t) {
         const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
         const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
@@ -277,11 +271,143 @@ function launchFullscreenFerretGame(item) {
         return `rgb(${r},${g},${b})`;
     }
 
+    /* Dessine le célèbre Bunker (Blockhaus) ensablé du Cap Ferret avec ses tags */
+    function drawCapFerretBunker(bx, by, scale, sunProgress) {
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.scale(scale, scale);
+
+        // 1. Structure en béton inclinée dans la dune
+        ctx.save();
+        ctx.rotate(-0.15); // Incliné vers l'océan comme les vrais blockhaus du Ferret
+
+        // Ombre portée du bunker sur le sable
+        ctx.fillStyle = 'rgba(40, 32, 24, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(8, 28, 62, 14, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Face latérale droite (dans l'ombre)
+        ctx.fillStyle = lerpColor([118, 112, 104], [62, 60, 58], sunProgress * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(36, -32);
+        ctx.lineTo(58, -22);
+        ctx.lineTo(54, 28);
+        ctx.lineTo(36, 30);
+        ctx.closePath();
+        ctx.fill();
+
+        // Face principale en béton brut
+        ctx.fillStyle = lerpColor([168, 160, 148], [94, 90, 86], sunProgress * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(-48, -28);
+        ctx.lineTo(36, -32);
+        ctx.lineTo(36, 30);
+        ctx.lineTo(-46, 28);
+        ctx.closePath();
+        ctx.fill();
+
+        // Toit massif biseauté (casemate)
+        ctx.fillStyle = lerpColor([188, 178, 164], [110, 105, 98], sunProgress * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(-52, -28);
+        ctx.lineTo(-40, -44);
+        ctx.lineTo(44, -45);
+        ctx.lineTo(58, -22);
+        ctx.lineTo(36, -32);
+        ctx.closePath();
+        ctx.fill();
+
+        // Fente d'observation sombre (visière du blockhaus)
+        ctx.fillStyle = '#1E1D1B';
+        ctx.fillRect(-30, -24, 48, 7);
+        // Ombre sous la casquette en béton
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.fillRect(-48, -28, 84, 4);
+
+        // --- TAGS & GRAFFITIS COLORÉS SUR LE BÉTON ---
+        // Splash / Vague street-art turquoise à gauche
+        ctx.fillStyle = 'rgba(46, 196, 182, 0.85)';
+        ctx.beginPath();
+        ctx.arc(-26, 2, 13, 0, Math.PI * 2);
+        ctx.arc(-14, 6, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fond de tag rose/magenta + jaune solaire
+        ctx.fillStyle = 'rgba(255, 93, 143, 0.85)';
+        ctx.beginPath();
+        ctx.roundRect(-18, -11, 44, 18, 6);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 190, 11, 0.85)';
+        ctx.beginPath();
+        ctx.arc(22, 6, 9, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Petites coulures de bombe de peinture
+        ctx.fillStyle = 'rgba(255, 93, 143, 0.85)';
+        ctx.fillRect(-8, 7, 2.2, 8);
+        ctx.fillRect(10, 7, 2, 6);
+        ctx.fillStyle = 'rgba(46, 196, 182, 0.85)';
+        ctx.fillRect(-28, 14, 2, 7);
+
+        // Lettrage Graffiti "FERRET"
+        ctx.save();
+        ctx.rotate(-0.04);
+        ctx.font = '900 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = '#1C1B19';
+        ctx.lineWidth = 3;
+        ctx.strokeText('FERRET', 3, -2);
+        ctx.fillStyle = '#FFFDF7';
+        ctx.fillText('FERRET', 3, -2);
+        ctx.restore();
+
+        // Petit tag coeur blanc/rouge sur le flanc droit
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = '#FFE5EC';
+        ctx.fillText('♥', 45, -2);
+
+        // Fissures et grain du vieux béton
+        ctx.strokeStyle = 'rgba(40, 36, 32, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-38, -28);
+        ctx.lineTo(-33, -12);
+        ctx.lineTo(-36, -4);
+        ctx.stroke();
+
+        ctx.restore(); // Fin de l'inclinaison du bunker
+
+        // 2. Bourrelet de sable par-dessus la base pour l'effet "ensablé dans la dune"
+        ctx.fillStyle = lerpColor([226, 203, 172], [138, 123, 108], sunProgress * 0.7);
+        ctx.beginPath();
+        ctx.moveTo(-68, 26);
+        ctx.quadraticCurveTo(-10, 8, 66, 24);
+        ctx.lineTo(66, 42);
+        ctx.lineTo(-68, 42);
+        ctx.closePath();
+        ctx.fill();
+
+        // Quelques oyats (herbes de dune) qui poussent au pied du bunker
+        ctx.strokeStyle = '#5F7353';
+        ctx.lineWidth = 1.6;
+        [-42, -36, 32, 38].forEach((ox, idx) => {
+            ctx.beginPath();
+            ctx.moveTo(ox, 20);
+            ctx.quadraticCurveTo(ox + (idx % 2 === 0 ? -8 : 8), 5, ox + (idx % 2 === 0 ? -13 : 13), 10);
+            ctx.stroke();
+        });
+
+        ctx.restore();
+    }
+
     function drawEnvironment(sunProgress, dt) {
         const horizonY = height * 0.34;
         const crestY = height * 0.40;
 
-        // 1. Ciel dynamique (du doré rosé au bleu crépusculaire)
+        // 1. Ciel dynamique
         const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
         const topColor = lerpColor([209, 113, 102], [25, 34, 54], sunProgress);
         const midColor = lerpColor([244, 162, 110], [115, 75, 109], sunProgress);
@@ -329,7 +455,7 @@ function launchFullscreenFerretGame(item) {
             }
         }
 
-        // 4. Silhouette discrète du Phare du Cap Ferret au loin sur la droite
+        // 4. Silhouette du Phare du Cap Ferret au loin sur la droite
         const lhX = width * 0.84;
         const lhBaseY = horizonY + 2;
         ctx.fillStyle = '#23312B';
@@ -339,7 +465,6 @@ function launchFullscreenFerretGame(item) {
         ctx.lineTo(lhX + 2, lhBaseY - 26);
         ctx.lineTo(lhX + 4, lhBaseY);
         ctx.fill();
-        // Sommet rouge sombre du phare + faisceau doux
         ctx.fillStyle = '#8B3A3A';
         ctx.fillRect(lhX - 2.5, lhBaseY - 31, 5, 5);
         const beamAlpha = 0.15 + Math.sin(worldScroll * 4) * 0.08;
@@ -365,7 +490,7 @@ function launchFullscreenFerretGame(item) {
         ctx.closePath();
         ctx.fill();
 
-        // Courbes douces des dunes latérales
+        // Courbes des dunes latérales
         ctx.fillStyle = 'rgba(180, 150, 115, 0.22)';
         ctx.beginPath();
         ctx.moveTo(0, crestY + 40);
@@ -377,7 +502,14 @@ function launchFullscreenFerretGame(item) {
         ctx.quadraticCurveTo(width * 0.72, crestY + 110, width, height * 0.82);
         ctx.fill();
 
-        // 6. Chemin central en perspective + Caillebotis en bois
+        // 6. BUNKER TAGUÉ DU CAP FERRET (sur le flanc haut gauche de la dune)
+        const bunkerProgress = altitude / 100; // Se rapproche doucement pendant la montée
+        const bunkerX = width * 0.20 - bunkerProgress * 8;
+        const bunkerY = crestY + 34 + bunkerProgress * 28;
+        const bunkerScale = (Math.min(width, 430) / 390) * (0.82 + bunkerProgress * 0.16);
+        drawCapFerretBunker(bunkerX, bunkerY, bunkerScale, sunProgress);
+
+        // 7. Chemin central en perspective + Caillebotis en bois
         const pathTopW = width * 0.22;
         const pathBotW = width * 0.86;
         const pathHeight = height - crestY;
@@ -391,11 +523,10 @@ function launchFullscreenFerretGame(item) {
         ctx.closePath();
         ctx.fill();
 
-        // Lattes de caillebotis (bois grisé par le sel et le sable) qui défilent en perspective
+        // Lattes de caillebotis qui défilent en perspective
         const numSlats = 14;
         for (let i = 0; i < numSlats; i++) {
             const rawP = ((i / numSlats) + (worldScroll * 0.55)) % 1;
-            // Courbe exponentielle pour respecter la perspective
             const p = Math.pow(rawP, 1.65);
             const slatY = crestY + p * pathHeight;
             const currentPathW = pathTopW + p * (pathBotW - pathTopW);
@@ -408,16 +539,18 @@ function launchFullscreenFerretGame(item) {
             ctx.fill();
         }
 
-        // 7. Pins maritimes et oyats (herbes de dune) sur les côtés en perspective
+        // 8. Pins maritimes et oyats sur les bords
         pines.forEach((pine) => {
             pine.progress = (pine.progress + dt * 0.28) % 1;
+            // Évite de dessiner un pin pile devant le bunker en haut à gauche
+            if (pine.side === -1 && pine.progress < 0.34) return;
+
             const p = Math.pow(pine.progress, 1.6);
             const py = crestY + p * pathHeight;
             const currentPathW = pathTopW + p * (pathBotW - pathTopW);
             const px = sunX + pine.side * (currentPathW * 0.58 + p * 35);
             const scale = (0.25 + p * 0.95) * pine.sizeVar;
 
-            // Touffe d'oyats (herbes sauvages de la dune)
             ctx.strokeStyle = '#6B7F5E';
             ctx.lineWidth = 1.5 * scale;
             for (let b = -2; b <= 2; b++) {
@@ -427,11 +560,9 @@ function launchFullscreenFerretGame(item) {
                 ctx.stroke();
             }
 
-            // Tronc incliné de pin maritime
             ctx.fillStyle = '#4A3728';
             ctx.fillRect(px - 3 * scale, py - 38 * scale, 6 * scale, 38 * scale);
 
-            // Houppier parasol du pin
             ctx.fillStyle = '#24382F';
             ctx.beginPath();
             ctx.ellipse(px, py - 42 * scale, 26 * scale, 12 * scale, 0, 0, Math.PI * 2);
@@ -453,7 +584,6 @@ function launchFullscreenFerretGame(item) {
         const px = player.x;
         const py = player.y - bobY;
 
-        // Petits nuages de sable sous les pieds en courant
         if (Math.sin(runCycle) > 0.85 && isRunning) {
             particles.push({
                 x: px + (Math.random() * 14 - 7),
@@ -470,13 +600,11 @@ function launchFullscreenFerretGame(item) {
         ctx.translate(px, py);
         ctx.rotate(tilt);
 
-        // Ombre portée sur le sable
         ctx.fillStyle = 'rgba(44, 35, 25, 0.22)';
         ctx.beginPath();
         ctx.ellipse(0, 20 + bobY, 18, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Robe / Tunique d'été fluide blanc cassé
         ctx.fillStyle = '#FAF6F0';
         ctx.beginPath();
         ctx.moveTo(-11, -2);
@@ -486,13 +614,11 @@ function launchFullscreenFerretGame(item) {
         ctx.closePath();
         ctx.fill();
 
-        // Cheveux qui flottent légèrement au vent
         ctx.fillStyle = '#3B281E';
         ctx.beginPath();
         ctx.arc(0, -10, 10, 0, Math.PI * 2);
         ctx.fill();
 
-        // Chapeau de paille du Ferret avec ruban vert sapin
         ctx.fillStyle = '#E2B887';
         ctx.beginPath();
         ctx.ellipse(0, -14, 20, 8, 0, 0, Math.PI * 2);
@@ -519,7 +645,6 @@ function launchFullscreenFerretGame(item) {
                 gamesWon.push(item.day);
                 localStorage.setItem(GAMES_WON_KEY, JSON.stringify(gamesWon));
             }
-            // Confettis dorés au sommet de la dune
             addParticles(width / 2, height * 0.35, '#FFE099', 28);
 
             fsEndBadge.textContent = 'Sommet de la Dune • Cap Ferret';
@@ -528,7 +653,7 @@ function launchFullscreenFerretGame(item) {
             fsEndBtn.textContent = 'Découvrir mon mot du 4 décembre';
             fsEndBtn.onclick = () => {
                 closeFullscreenGame();
-                openModal(item); // Rafraîchit la modale avec le message débloqué
+                openModal(item);
             };
         } else {
             fsEndBadge.textContent = 'Trop tard...';
@@ -570,13 +695,11 @@ function launchFullscreenFerretGame(item) {
         const sunProgress = 1 - (timeLeft / totalTime);
         const geom = drawEnvironment(isRunning ? sunProgress : (altitude >= 100 ? 0.35 : 1), dt);
 
-        // Position X réelle de la joueuse sur le bas du chemin
         player.lanePos += (player.targetLanePos - player.lanePos) * 0.18;
         player.y = height * 0.81;
         const playerPathWidth = geom.pathTopW + 0.81 * (geom.pathBotW - geom.pathTopW);
         player.x = geom.sunX + player.lanePos * (playerPathWidth * 0.42);
 
-        // Mise à jour et dessin des obstacles avec perspective 3D
         for (let i = obstacles.length - 1; i >= 0; i--) {
             const obs = obstacles[i];
             if (isRunning) {
@@ -590,13 +713,11 @@ function launchFullscreenFerretGame(item) {
             const scale = 0.38 + p * 0.85;
             const radius = 20 * scale;
 
-            // Ombre sous l'objet
             ctx.fillStyle = 'rgba(28, 27, 25, 0.18)';
             ctx.beginPath();
             ctx.ellipse(ox, oy + radius * 0.75, radius * 0.9, radius * 0.35, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Pastille esthétique autour de l'objet
             ctx.fillStyle = obs.bonus ? 'rgba(255, 243, 210, 0.92)' : 'rgba(255, 255, 255, 0.88)';
             ctx.strokeStyle = obs.color;
             ctx.lineWidth = 2 * scale;
@@ -610,7 +731,6 @@ function launchFullscreenFerretGame(item) {
             ctx.textBaseline = 'middle';
             ctx.fillText(obs.emoji, ox, oy + 1);
 
-            // Détection de collision avec la joueuse
             if (isRunning && Math.hypot(ox - player.x, oy - player.y) < radius + 16) {
                 altitude = Math.max(0, Math.min(100, altitude + obs.penalty));
 
@@ -640,7 +760,6 @@ function launchFullscreenFerretGame(item) {
 
         drawPlayer(dt);
 
-        // Dessin des particules (sable / étoiles dorées)
         for (let i = particles.length - 1; i >= 0; i--) {
             const pt = particles[i];
             pt.x += pt.vx * dt;
@@ -658,7 +777,6 @@ function launchFullscreenFerretGame(item) {
             ctx.globalAlpha = 1;
         }
 
-        // Textes flottants lors des collisions
         for (let i = popups.length - 1; i >= 0; i--) {
             const pop = popups[i];
             pop.y -= dt * 42;
@@ -685,7 +803,6 @@ function launchFullscreenFerretGame(item) {
 
         ctx.restore();
 
-        // Mise à jour du HUD supérieur
         const pct = Math.floor(altitude);
         fsAltText.textContent = `${pct}%`;
         fsAltBar.style.width = `${pct}%`;

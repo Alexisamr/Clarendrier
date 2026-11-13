@@ -6,26 +6,25 @@ const DEV_MODE = true;
 const STORAGE_KEY = 'advent_opened_days_v1';
 const GAMES_WON_KEY = 'advent_games_won_v1';
 
-// Contenu des 24 jours
 const calendarData = Array.from({ length: 24 }, (_, i) => {
     const day = i + 1;
 
-    // JOUR 4 : Premier mini-jeu (Cap Ferret)
     if (day === 4) {
         return {
             day: 4,
             title: "Le Sunset du Ferret",
             game: "ferret",
-            content: `Bravo, tu es arrivée en haut de la dune juste à temps pour le coucher de soleil (et sans pomme de pin dans le pied).<br><br>Voici ta vraie surprise du 4 décembre...`
+            gameTitle: "L'Ascension de la Dune",
+            gameSubtitle: "Défi Cap Ferret • 22 secondes",
+            content: `Bravo, tu es arrivée en haut de la dune juste à temps pour voir le soleil plonger dans l'océan (et sans aucune pomme de pin sous le pied).<br><br>Voici ta surprise du 4 décembre...`
         };
     }
 
-    // JOUR 20 : Emplacement réservé pour le 2e mini-jeu de fin décembre
     if (day === 20) {
         return {
             day: 20,
             title: "Défi de fin décembre",
-            game: null, // On activera le 2e jeu ici quand tu voudras
+            game: null,
             content: `Surprise du 20 décembre.`
         };
     }
@@ -49,6 +48,19 @@ const modalDay = document.getElementById('modal-day');
 const modalTitle = document.getElementById('modal-title');
 const modalBody = document.getElementById('modal-body');
 const toastEl = document.getElementById('toast');
+
+// Éléments Plein Écran
+const fsOverlay = document.getElementById('fs-game-overlay');
+const fsCloseBtn = document.getElementById('fs-close-btn');
+const fsAltText = document.getElementById('fs-alt-text');
+const fsAltBar = document.getElementById('fs-alt-bar');
+const fsTimer = document.getElementById('fs-timer');
+const fsHint = document.getElementById('fs-hint');
+const fsEndCard = document.getElementById('fs-end-card');
+const fsEndBadge = document.getElementById('fs-end-badge');
+const fsEndTitle = document.getElementById('fs-end-title');
+const fsEndDesc = document.getElementById('fs-end-desc');
+const fsEndBtn = document.getElementById('fs-end-btn');
 
 let toastTimeout;
 
@@ -79,315 +91,612 @@ function stopActiveGame() {
     }
 }
 
-function openModal(item, forceGame = false) {
-    stopActiveGame();
+/* Ouvre la modale du jour avec la petite box cliquable pour le jeu */
+function openModal(item) {
     modalDay.textContent = `${item.day} Décembre`;
     modalTitle.textContent = item.title;
+    modalBody.innerHTML = '';
 
-    const hasBeatenGame = gamesWon.includes(item.day);
+    const hasWon = gamesWon.includes(item.day);
 
-    // Si la case contient le jeu du Ferret et qu'elle ne l'a pas encore gagné (ou veut rejouer)
-    if (item.game === 'ferret' && (!hasBeatenGame || forceGame)) {
-        renderFerretGame(item);
+    if (item.game === 'ferret') {
+        if (hasWon) {
+            // Si elle a déjà gagné, on affiche le vrai message + la box en dessous pour rejouer
+            const msgDiv = document.createElement('div');
+            msgDiv.style.marginBottom = '18px';
+            msgDiv.innerHTML = item.content;
+            modalBody.appendChild(msgDiv);
+        } else {
+            const introP = document.createElement('p');
+            introP.style.color = 'var(--text-secondary)';
+            introP.style.fontSize = '0.9rem';
+            introP.textContent = "Pour débloquer ton mot du jour, grimpe en haut de la dune avant que le soleil ne disparaisse derrière l'océan :";
+            modalBody.appendChild(introP);
+        }
+
+        // Création de la petite box du jeu qui lance le plein écran au clic
+        const launchBox = document.createElement('div');
+        launchBox.className = 'game-launch-box';
+        launchBox.innerHTML = `
+            <div class="game-launch-sun"></div>
+            <div class="game-launch-content">
+                <span class="game-launch-tag">${item.gameSubtitle}</span>
+                <h3 class="game-launch-title">${item.gameTitle}</h3>
+                <div class="game-launch-cta">
+                    <span>${hasWon ? '↺ Rejouer en plein écran' : '▶ Lancer en plein écran'}</span>
+                </div>
+            </div>
+        `;
+        launchBox.addEventListener('click', () => {
+            launchFullscreenFerretGame(item);
+        });
+        modalBody.appendChild(launchBox);
     } else {
-        renderDayContent(item);
+        modalBody.innerHTML = `<div>${item.content}</div>`;
     }
 
     modalOverlay.classList.add('active');
     modalOverlay.setAttribute('aria-hidden', 'false');
 }
 
-function renderDayContent(item) {
-    modalBody.innerHTML = `<div>${item.content}</div>`;
-    if (item.game) {
-        const replayBtn = document.createElement('button');
-        replayBtn.className = 'btn-replay';
-        replayBtn.textContent = '↺ Rejouer à l’ascension de la dune';
-        replayBtn.addEventListener('click', () => openModal(item, true));
-        modalBody.appendChild(replayBtn);
-    }
-}
-
 function closeModal() {
-    stopActiveGame();
     modalOverlay.classList.remove('active');
     modalOverlay.setAttribute('aria-hidden', 'true');
 }
 
-/* =========================================================
-   MINI-JEU 1 : L'ASCENSION DE LA DUNE (CAP FERRET)
-   ========================================================= */
-function renderFerretGame(item) {
-    modalBody.innerHTML = `
-        <div class="game-wrapper">
-            <p class="game-intro">
-                Le soleil plonge derrière l'océan ! Glisse ton doigt à gauche ou à droite pour grimper la dune et éviter les pièges du chemin.
-            </p>
-            <div class="game-hud">
-                <span id="ferret-alt">Sommet : 0%</span>
-                <span id="ferret-sun">Soleil : 20s</span>
-            </div>
-            <div class="game-canvas-container">
-                <canvas id="ferret-canvas" width="320" height="270"></canvas>
-                <div class="game-feedback" id="ferret-feedback"></div>
-            </div>
-            <div id="ferret-action" style="width: 100%;"></div>
-        </div>
-    `;
+function closeFullscreenGame() {
+    stopActiveGame();
+    fsOverlay.classList.remove('active');
+    fsOverlay.setAttribute('aria-hidden', 'true');
+    fsEndCard.classList.remove('visible');
+}
+
+fsCloseBtn.addEventListener('click', closeFullscreenGame);
+
+/* =========================================================================
+   MINI-JEU PLEIN ÉCRAN HAUTE DÉFINITION : LE SUNSET DU CAP FERRET
+   ========================================================================= */
+function launchFullscreenFerretGame(item) {
+    stopActiveGame();
+    fsOverlay.classList.add('active');
+    fsOverlay.setAttribute('aria-hidden', 'false');
+    fsEndCard.classList.remove('visible');
+    fsHint.style.opacity = '1';
 
     const canvas = document.getElementById('ferret-canvas');
     const ctx = canvas.getContext('2d');
-    const altEl = document.getElementById('ferret-alt');
-    const sunEl = document.getElementById('ferret-sun');
-    const feedbackEl = document.getElementById('ferret-feedback');
-    const actionContainer = document.getElementById('ferret-action');
+
+    // Calibration Retina pour iPhone 13
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+
+    function resizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resizeCanvas();
 
     let animId;
     let isRunning = true;
-    let gameWon = false;
-
-    let altitude = 0; // Objectif : 100
-    let timeLeft = 20; // 20 secondes avant la nuit
+    let altitude = 0; // 0 à 100%
+    const totalTime = 22;
+    let timeLeft = totalTime;
     let lastTime = performance.now();
-    let spawnTimer = 0;
-    let sandOffset = 0;
 
-    // Joueuse (en bas de l'écran)
+    let worldScroll = 0;
+    let spawnTimer = 0;
+    let runCycle = 0;
+    let screenShake = 0;
+
+    // Position de la joueuse (-1 = gauche du chemin, 0 = centre, +1 = droite)
     const player = {
-        x: canvas.width / 2,
-        targetX: canvas.width / 2,
-        y: 225,
-        radius: 13
+        lanePos: 0,
+        targetLanePos: 0,
+        x: width / 2,
+        y: height * 0.80
     };
 
     const obstacles = [];
+    const popups = [];
+    const particles = [];
+
+    // Décor : Pins maritimes qui défilent sur les côtés de la dune
+    const pines = Array.from({ length: 10 }, (_, i) => ({
+        side: i % 2 === 0 ? -1 : 1,
+        progress: (i / 10),
+        sizeVar: 0.85 + (i % 3) * 0.15
+    }));
+
     const OBSTACLE_TYPES = [
-        { emoji: '🌲', speed: 115, penalty: -9, text: 'Aïe ! Pomme de pin sous le pied !' },
-        { emoji: '🚲', speed: 135, penalty: -12, text: 'Bloqué par un touriste en Fatbike !' },
-        { emoji: '🦪', speed: 105, penalty: -10, text: 'Outch, une coquille d’huître !' },
-        { emoji: '🩴', speed: 120, penalty: -7, text: 'Trébuché sur une claquette perdue !' },
-        { emoji: '🧁', speed: 125, penalty: +14, text: 'Canelé tout chaud : +14% !', bonus: true }
+        { emoji: '🌲', label: 'Pomme de pin !', penalty: -9, speed: 0.42, bonus: false, color: '#8C5A3C' },
+        { emoji: '🚲', label: 'Touriste en Fatbike !', penalty: -12, speed: 0.48, bonus: false, color: '#3E5C76' },
+        { emoji: '🦪', label: 'Coquille d’huître !', penalty: -10, speed: 0.40, bonus: false, color: '#7D8597' },
+        { emoji: '🩴', label: 'Claquette perdue !', penalty: -7, speed: 0.45, bonus: false, color: '#E07A5F' },
+        { emoji: '🧁', label: 'Canelé +14% ✨', penalty: +14, speed: 0.44, bonus: true, color: '#F4A261' }
     ];
 
-    let feedbackTimeout;
-    function showFeedback(msg) {
-        feedbackEl.textContent = msg;
-        feedbackEl.classList.add('visible');
-        clearTimeout(feedbackTimeout);
-        feedbackTimeout = setTimeout(() => {
-            feedbackEl.classList.remove('visible');
-        }, 1200);
+    // Contrôles fluides au doigt ou à la souris
+    function updateTargetFromX(clientX) {
+        fsHint.style.opacity = '0';
+        const norm = (clientX / width) * 2 - 1; // -1 à +1
+        player.targetLanePos = Math.max(-0.85, Math.min(0.85, norm * 1.15));
     }
 
-    // Contrôles tactiles iPhone & souris
-    function handleMove(clientX) {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const relX = (clientX - rect.left) * scaleX;
-        // Garde la joueuse sur le chemin de sable (entre les pins)
-        player.targetX = Math.max(48, Math.min(canvas.width - 48, relX));
-    }
-
+    const onTouchStart = (e) => {
+        if (e.touches.length > 0) updateTargetFromX(e.touches[0].clientX);
+    };
     const onTouchMove = (e) => {
         e.preventDefault();
-        if (e.touches.length > 0) handleMove(e.touches[0].clientX);
-    };
-    const onTouchStart = (e) => {
-        if (e.touches.length > 0) handleMove(e.touches[0].clientX);
+        if (e.touches.length > 0) updateTargetFromX(e.touches[0].clientX);
     };
     const onMouseMove = (e) => {
-        if (e.buttons === 1) handleMove(e.clientX);
+        if (e.buttons === 1) updateTargetFromX(e.clientX);
     };
 
     canvas.addEventListener('touchstart', onTouchStart, { passive: true });
     canvas.addEventListener('touchmove', onTouchMove, { passive: false });
     canvas.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('resize', resizeCanvas);
 
     function spawnObstacle() {
-        const isBonus = Math.random() < 0.22;
-        const pool = isBonus
-            ? OBSTACLE_TYPES.filter(o => o.bonus)
-            : OBSTACLE_TYPES.filter(o => !o.bonus);
+        const isBonus = Math.random() < 0.24;
+        const pool = OBSTACLE_TYPES.filter(o => o.bonus === isBonus);
         const type = pool[Math.floor(Math.random() * pool.length)];
 
         obstacles.push({
-            x: 52 + Math.random() * (canvas.width - 104),
-            y: 78, // Apparaît au sommet de la dune
+            lane: (Math.random() * 1.5) - 0.75, // Position latérale sur le chemin
+            progress: 0.02, // 0 = crête de la dune, 1 = tout en bas
             ...type
         });
     }
 
-    function drawScene(sunProgress) {
-        // 1. Ciel qui s'assombrit au fil du coucher de soleil (0 = doré, 1 = crépuscule)
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, 95);
-        if (sunProgress < 0.65) {
-            skyGrad.addColorStop(0, '#D88C7A');
-            skyGrad.addColorStop(1, '#F3C68F');
-        } else {
-            skyGrad.addColorStop(0, '#2C3E50');
-            skyGrad.addColorStop(1, '#C06C84');
+    function addParticles(x, y, color, count = 12) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 40 + Math.random() * 110;
+            particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 30,
+                life: 1,
+                color,
+                size: 3 + Math.random() * 4
+            });
         }
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, canvas.width, 95);
+    }
 
-        // 2. Soleil qui descend dans l'océan
-        const sunY = 28 + sunProgress * 52;
-        ctx.fillStyle = '#FFF6E5';
+    // Interpolation de couleur pour le coucher de soleil
+    function lerpColor(c1, c2, t) {
+        const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+        const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+        const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function drawEnvironment(sunProgress, dt) {
+        const horizonY = height * 0.34;
+        const crestY = height * 0.40;
+
+        // 1. Ciel dynamique (du doré rosé au bleu crépusculaire)
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+        const topColor = lerpColor([209, 113, 102], [25, 34, 54], sunProgress);
+        const midColor = lerpColor([244, 162, 110], [115, 75, 109], sunProgress);
+        const botColor = lerpColor([255, 218, 158], [214, 114, 96], sunProgress);
+        skyGrad.addColorStop(0, topColor);
+        skyGrad.addColorStop(0.55, midColor);
+        skyGrad.addColorStop(1, botColor);
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, width, horizonY + 10);
+
+        // 2. Soleil avec double halo lumineux
+        const sunX = width * 0.5;
+        const sunY = (height * 0.16) + sunProgress * (horizonY - height * 0.13);
+        const sunRadius = Math.min(width, height) * 0.11;
+
+        const haloGrad = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.2, sunX, sunY, sunRadius * 2.8);
+        haloGrad.addColorStop(0, 'rgba(255, 248, 225, 0.95)');
+        haloGrad.addColorStop(0.35, 'rgba(255, 205, 135, 0.45)');
+        haloGrad.addColorStop(1, 'rgba(255, 160, 110, 0)');
+        ctx.fillStyle = haloGrad;
         ctx.beginPath();
-        ctx.arc(canvas.width / 2, sunY, 20, 0, Math.PI * 2);
+        ctx.arc(sunX, sunY, sunRadius * 2.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFFDF6';
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
         ctx.fill();
 
         // 3. Océan Atlantique à l'horizon
-        ctx.fillStyle = '#3B596A';
-        ctx.fillRect(0, 68, canvas.width, 28);
+        const oceanGrad = ctx.createLinearGradient(0, horizonY - 4, 0, crestY + 10);
+        oceanGrad.addColorStop(0, lerpColor([58, 90, 112], [22, 35, 48], sunProgress));
+        oceanGrad.addColorStop(1, lerpColor([42, 70, 88], [16, 26, 36], sunProgress));
+        ctx.fillStyle = oceanGrad;
+        ctx.fillRect(0, horizonY - 4, width, crestY - horizonY + 15);
 
-        // Reflet du soleil sur l'eau
-        if (sunProgress < 0.92) {
-            ctx.fillStyle = 'rgba(255, 246, 229, 0.35)';
-            ctx.fillRect(canvas.width / 2 - 14, 72, 28, 6);
+        // Reflets dorés animés sur l'eau
+        if (sunProgress < 0.94) {
+            ctx.fillStyle = 'rgba(255, 232, 185, 0.45)';
+            for (let i = 0; i < 6; i++) {
+                const waveY = horizonY + 3 + i * 5.5;
+                const waveW = (46 - i * 5) * (1 - sunProgress * 0.5);
+                const shimmer = Math.sin(worldScroll * 5 + i * 1.7) * 6;
+                ctx.fillRect(sunX - waveW / 2 + shimmer, waveY, waveW, 2.2);
+            }
         }
 
-        // 4. La Dune du Cap Ferret
-        ctx.fillStyle = '#E6D7C3';
+        // 4. Silhouette discrète du Phare du Cap Ferret au loin sur la droite
+        const lhX = width * 0.84;
+        const lhBaseY = horizonY + 2;
+        ctx.fillStyle = '#23312B';
         ctx.beginPath();
-        ctx.moveTo(0, 88);
-        ctx.quadraticCurveTo(canvas.width / 2, 74, canvas.width, 88);
-        ctx.lineTo(canvas.width, canvas.height);
-        ctx.lineTo(0, canvas.height);
+        ctx.moveTo(lhX - 4, lhBaseY);
+        ctx.lineTo(lhX - 2, lhBaseY - 26);
+        ctx.lineTo(lhX + 2, lhBaseY - 26);
+        ctx.lineTo(lhX + 4, lhBaseY);
+        ctx.fill();
+        // Sommet rouge sombre du phare + faisceau doux
+        ctx.fillStyle = '#8B3A3A';
+        ctx.fillRect(lhX - 2.5, lhBaseY - 31, 5, 5);
+        const beamAlpha = 0.15 + Math.sin(worldScroll * 4) * 0.08;
+        ctx.fillStyle = `rgba(255, 243, 196, ${beamAlpha})`;
+        ctx.beginPath();
+        ctx.moveTo(lhX, lhBaseY - 29);
+        ctx.lineTo(lhX - 55, lhBaseY - 42);
+        ctx.lineTo(lhX - 55, lhBaseY - 18);
         ctx.closePath();
         ctx.fill();
 
-        // Chemin central dans le sable
-        ctx.fillStyle = '#EFE5D8';
+        // 5. Corps de la Dune du Ferret
+        const sandGrad = ctx.createLinearGradient(0, crestY, 0, height);
+        sandGrad.addColorStop(0, lerpColor([234, 214, 186], [150, 134, 118], sunProgress * 0.7));
+        sandGrad.addColorStop(1, lerpColor([212, 186, 152], [115, 102, 88], sunProgress * 0.7));
+        ctx.fillStyle = sandGrad;
+
         ctx.beginPath();
-        ctx.moveTo(95, 82);
-        ctx.lineTo(225, 82);
-        ctx.lineTo(290, canvas.height);
-        ctx.lineTo(30, canvas.height);
+        ctx.moveTo(0, crestY + 8);
+        ctx.quadraticCurveTo(width * 0.5, crestY - 14, width, crestY + 8);
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
         ctx.closePath();
         ctx.fill();
 
-        // Petits grains de sable qui défilent pour donner l'effet de montée
-        ctx.fillStyle = '#D2C0A8';
-        for (let i = 0; i < 6; i++) {
-            const grainY = 95 + ((sandOffset + i * 32) % 170);
-            const grainX = 75 + ((i * 37) % 170);
-            ctx.fillRect(grainX, grainY, 3, 3);
-        }
+        // Courbes douces des dunes latérales
+        ctx.fillStyle = 'rgba(180, 150, 115, 0.22)';
+        ctx.beginPath();
+        ctx.moveTo(0, crestY + 40);
+        ctx.quadraticCurveTo(width * 0.28, crestY + 95, 0, height * 0.78);
+        ctx.fill();
 
-        // Silhouettes sobres de pins maritimes sur les bords
-        ctx.fillStyle = '#2C3E35';
-        [18, 302].forEach((bx) => {
+        ctx.beginPath();
+        ctx.moveTo(width, crestY + 55);
+        ctx.quadraticCurveTo(width * 0.72, crestY + 110, width, height * 0.82);
+        ctx.fill();
+
+        // 6. Chemin central en perspective + Caillebotis en bois
+        const pathTopW = width * 0.22;
+        const pathBotW = width * 0.86;
+        const pathHeight = height - crestY;
+
+        ctx.fillStyle = lerpColor([243, 229, 208], [168, 152, 136], sunProgress * 0.7);
+        ctx.beginPath();
+        ctx.moveTo(sunX - pathTopW / 2, crestY);
+        ctx.lineTo(sunX + pathTopW / 2, crestY);
+        ctx.lineTo(sunX + pathBotW / 2, height);
+        ctx.lineTo(sunX - pathBotW / 2, height);
+        ctx.closePath();
+        ctx.fill();
+
+        // Lattes de caillebotis (bois grisé par le sel et le sable) qui défilent en perspective
+        const numSlats = 14;
+        for (let i = 0; i < numSlats; i++) {
+            const rawP = ((i / numSlats) + (worldScroll * 0.55)) % 1;
+            // Courbe exponentielle pour respecter la perspective
+            const p = Math.pow(rawP, 1.65);
+            const slatY = crestY + p * pathHeight;
+            const currentPathW = pathTopW + p * (pathBotW - pathTopW);
+            const slatW = currentPathW * 0.62;
+            const slatH = Math.max(1.5, p * 6.5);
+
+            ctx.fillStyle = `rgba(138, 118, 98, ${0.25 + p * 0.45})`;
             ctx.beginPath();
-            ctx.arc(bx, 110, 22, 0, Math.PI * 2);
-            ctx.arc(bx, 165, 26, 0, Math.PI * 2);
-            ctx.arc(bx, 230, 30, 0, Math.PI * 2);
+            ctx.roundRect(sunX - slatW / 2, slatY, slatW, slatH, 2);
+            ctx.fill();
+        }
+
+        // 7. Pins maritimes et oyats (herbes de dune) sur les côtés en perspective
+        pines.forEach((pine) => {
+            pine.progress = (pine.progress + dt * 0.28) % 1;
+            const p = Math.pow(pine.progress, 1.6);
+            const py = crestY + p * pathHeight;
+            const currentPathW = pathTopW + p * (pathBotW - pathTopW);
+            const px = sunX + pine.side * (currentPathW * 0.58 + p * 35);
+            const scale = (0.25 + p * 0.95) * pine.sizeVar;
+
+            // Touffe d'oyats (herbes sauvages de la dune)
+            ctx.strokeStyle = '#6B7F5E';
+            ctx.lineWidth = 1.5 * scale;
+            for (let b = -2; b <= 2; b++) {
+                ctx.beginPath();
+                ctx.moveTo(px + b * 4 * scale, py);
+                ctx.quadraticCurveTo(px + b * 9 * scale, py - 14 * scale, px + b * 13 * scale, py - 8 * scale);
+                ctx.stroke();
+            }
+
+            // Tronc incliné de pin maritime
+            ctx.fillStyle = '#4A3728';
+            ctx.fillRect(px - 3 * scale, py - 38 * scale, 6 * scale, 38 * scale);
+
+            // Houppier parasol du pin
+            ctx.fillStyle = '#24382F';
+            ctx.beginPath();
+            ctx.ellipse(px, py - 42 * scale, 26 * scale, 12 * scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#2F483D';
+            ctx.beginPath();
+            ctx.ellipse(px - 4 * scale, py - 46 * scale, 20 * scale, 9 * scale, 0, 0, Math.PI * 2);
             ctx.fill();
         });
+
+        return { crestY, pathTopW, pathBotW, pathHeight, sunX };
     }
 
-    function loop(now) {
-        if (!isRunning) return;
-        const dt = Math.min((now - lastTime) / 1000, 0.1);
-        lastTime = now;
+    function drawPlayer(dt) {
+        runCycle += dt * 14;
+        const bobY = Math.abs(Math.sin(runCycle)) * 4;
+        const tilt = (player.targetLanePos - player.lanePos) * 0.35;
 
-        timeLeft = Math.max(0, timeLeft - dt);
-        // Elle grimpe de 6.2% par seconde si elle évite les obstacles
-        altitude = Math.min(100, altitude + dt * 6.2);
-        sandOffset += dt * 95;
+        const px = player.x;
+        const py = player.y - bobY;
 
-        player.x += (player.targetX - player.x) * 0.22;
-
-        spawnTimer += dt;
-        if (spawnTimer > 0.65) {
-            spawnObstacle();
-            spawnTimer = 0;
+        // Petits nuages de sable sous les pieds en courant
+        if (Math.sin(runCycle) > 0.85 && isRunning) {
+            particles.push({
+                x: px + (Math.random() * 14 - 7),
+                y: player.y + 18,
+                vx: (Math.random() - 0.5) * 25,
+                vy: 15 + Math.random() * 20,
+                life: 0.6,
+                color: 'rgba(210, 185, 150, 0.7)',
+                size: 4 + Math.random() * 3
+            });
         }
 
-        const sunProgress = 1 - (timeLeft / 20);
-        drawScene(sunProgress);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(tilt);
 
-        // Mise à jour et dessin des obstacles
-        ctx.font = '22px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        // Ombre portée sur le sable
+        ctx.fillStyle = 'rgba(44, 35, 25, 0.22)';
+        ctx.beginPath();
+        ctx.ellipse(0, 20 + bobY, 18, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-            const obs = obstacles[i];
-            obs.y += obs.speed * dt;
-            ctx.fillText(obs.emoji, obs.x, obs.y);
+        // Robe / Tunique d'été fluide blanc cassé
+        ctx.fillStyle = '#FAF6F0';
+        ctx.beginPath();
+        ctx.moveTo(-11, -2);
+        ctx.lineTo(11, -2);
+        ctx.lineTo(16, 17);
+        ctx.lineTo(-16, 17);
+        ctx.closePath();
+        ctx.fill();
 
-            // Collision avec la joueuse
-            const dist = Math.hypot(obs.x - player.x, obs.y - player.y);
-            if (dist < player.radius + 11) {
-                altitude = Math.max(0, Math.min(100, altitude + obs.penalty));
-                showFeedback(obs.text);
-                obstacles.splice(i, 1);
-                continue;
-            }
+        // Cheveux qui flottent légèrement au vent
+        ctx.fillStyle = '#3B281E';
+        ctx.beginPath();
+        ctx.arc(0, -10, 10, 0, Math.PI * 2);
+        ctx.fill();
 
-            if (obs.y > canvas.height + 20) {
-                obstacles.splice(i, 1);
-            }
-        }
+        // Chapeau de paille du Ferret avec ruban vert sapin
+        ctx.fillStyle = '#E2B887';
+        ctx.beginPath();
+        ctx.ellipse(0, -14, 20, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Dessin de la joueuse (silhouette de dos avec chapeau d'été)
         ctx.fillStyle = '#2C3E35';
         ctx.beginPath();
-        ctx.arc(player.x, player.y + 8, 9, Math.PI, 0);
+        ctx.ellipse(0, -16, 10, 4.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Chapeau de paille
-        ctx.fillStyle = '#D4A373';
+        ctx.fillStyle = '#E9C496';
         ctx.beginPath();
-        ctx.ellipse(player.x, player.y - 4, 12, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#BC6C25';
-        ctx.beginPath();
-        ctx.arc(player.x, player.y - 6, 6, Math.PI, 0);
+        ctx.arc(0, -17, 9.5, Math.PI, 0);
         ctx.fill();
 
-        // HUD
-        altEl.textContent = `Sommet : ${Math.floor(altitude)}%`;
-        sunEl.textContent = `Soleil : ${Math.ceil(timeLeft)}s`;
+        ctx.restore();
+    }
 
-        // Victoire : Sommet atteint !
-        if (altitude >= 100) {
-            isRunning = false;
-            gameWon = true;
-            drawScene(0.35); // Beau coucher de soleil dégagé
-            showFeedback('Sommet atteint ! Quel sunset ✨');
+    function finishGame(won) {
+        isRunning = false;
 
+        if (won) {
             if (!gamesWon.includes(item.day)) {
                 gamesWon.push(item.day);
                 localStorage.setItem(GAMES_WON_KEY, JSON.stringify(gamesWon));
             }
+            // Confettis dorés au sommet de la dune
+            addParticles(width / 2, height * 0.35, '#FFE099', 28);
 
-            actionContainer.innerHTML = `
-                <button class="btn-sober" id="btn-unlock-msg">
-                    Admirer le sunset & lire le mot du jour
-                </button>
-            `;
-            document.getElementById('btn-unlock-msg').addEventListener('click', () => {
-                renderDayContent(item);
-            });
-            return;
+            fsEndBadge.textContent = 'Sommet de la Dune • Cap Ferret';
+            fsEndTitle.textContent = 'Quel Sunset ! ✨';
+            fsEndDesc.textContent = "Tu es arrivée tout en haut juste avant que le soleil ne plonge dans l'Atlantique.";
+            fsEndBtn.textContent = 'Découvrir mon mot du 4 décembre';
+            fsEndBtn.onclick = () => {
+                closeFullscreenGame();
+                openModal(item); // Rafraîchit la modale avec le message débloqué
+            };
+        } else {
+            fsEndBadge.textContent = 'Trop tard...';
+            fsEndTitle.textContent = 'Il fait nuit noire';
+            fsEndDesc.textContent = "Les pommes de pin et les touristes en Fatbike t'ont ralentie dans le sable mou !";
+            fsEndBtn.textContent = "Retenter l'ascension";
+            fsEndBtn.onclick = () => {
+                launchFullscreenFerretGame(item);
+            };
         }
 
-        // Défaite : Le soleil est couché
-        if (timeLeft <= 0) {
-            isRunning = false;
-            drawScene(1);
-            showFeedback('Il fait nuit noire sur le Bassin...');
-            actionContainer.innerHTML = `
-                <button class="btn-sober" id="btn-retry-game">
-                    Retenter l'ascension avant la nuit
-                </button>
-            `;
-            document.getElementById('btn-retry-game').addEventListener('click', () => {
-                renderFerretGame(item);
-            });
-            return;
+        fsEndCard.classList.add('visible');
+    }
+
+    function loop(now) {
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+
+        if (isRunning) {
+            timeLeft = Math.max(0, timeLeft - dt);
+            altitude = Math.min(100, altitude + dt * 5.8);
+            worldScroll += dt;
+
+            spawnTimer += dt;
+            if (spawnTimer > 0.62) {
+                spawnObstacle();
+                spawnTimer = 0;
+            }
+        }
+
+        ctx.save();
+        if (screenShake > 0) {
+            const dx = (Math.random() - 0.5) * screenShake;
+            const dy = (Math.random() - 0.5) * screenShake;
+            ctx.translate(dx, dy);
+            screenShake = Math.max(0, screenShake - dt * 28);
+        }
+
+        const sunProgress = 1 - (timeLeft / totalTime);
+        const geom = drawEnvironment(isRunning ? sunProgress : (altitude >= 100 ? 0.35 : 1), dt);
+
+        // Position X réelle de la joueuse sur le bas du chemin
+        player.lanePos += (player.targetLanePos - player.lanePos) * 0.18;
+        player.y = height * 0.81;
+        const playerPathWidth = geom.pathTopW + 0.81 * (geom.pathBotW - geom.pathTopW);
+        player.x = geom.sunX + player.lanePos * (playerPathWidth * 0.42);
+
+        // Mise à jour et dessin des obstacles avec perspective 3D
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const obs = obstacles[i];
+            if (isRunning) {
+                obs.progress += obs.speed * dt;
+            }
+
+            const p = Math.pow(obs.progress, 1.55);
+            const oy = geom.crestY + p * geom.pathHeight;
+            const currentW = geom.pathTopW + p * (geom.pathBotW - geom.pathTopW);
+            const ox = geom.sunX + obs.lane * (currentW * 0.42);
+            const scale = 0.38 + p * 0.85;
+            const radius = 20 * scale;
+
+            // Ombre sous l'objet
+            ctx.fillStyle = 'rgba(28, 27, 25, 0.18)';
+            ctx.beginPath();
+            ctx.ellipse(ox, oy + radius * 0.75, radius * 0.9, radius * 0.35, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pastille esthétique autour de l'objet
+            ctx.fillStyle = obs.bonus ? 'rgba(255, 243, 210, 0.92)' : 'rgba(255, 255, 255, 0.88)';
+            ctx.strokeStyle = obs.color;
+            ctx.lineWidth = 2 * scale;
+            ctx.beginPath();
+            ctx.arc(ox, oy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.font = `${Math.round(22 * scale)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(obs.emoji, ox, oy + 1);
+
+            // Détection de collision avec la joueuse
+            if (isRunning && Math.hypot(ox - player.x, oy - player.y) < radius + 16) {
+                altitude = Math.max(0, Math.min(100, altitude + obs.penalty));
+
+                popups.push({
+                    x: ox,
+                    y: oy - 15,
+                    text: obs.label,
+                    bonus: obs.bonus,
+                    life: 1.0
+                });
+
+                if (obs.bonus) {
+                    addParticles(ox, oy, '#FFD166', 16);
+                } else {
+                    screenShake = 9;
+                    addParticles(ox, oy, '#D4A373', 10);
+                }
+
+                obstacles.splice(i, 1);
+                continue;
+            }
+
+            if (oy > height + 50) {
+                obstacles.splice(i, 1);
+            }
+        }
+
+        drawPlayer(dt);
+
+        // Dessin des particules (sable / étoiles dorées)
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const pt = particles[i];
+            pt.x += pt.vx * dt;
+            pt.y += pt.vy * dt;
+            pt.life -= dt * 1.4;
+            if (pt.life <= 0) {
+                particles.splice(i, 1);
+                continue;
+            }
+            ctx.fillStyle = pt.color;
+            ctx.globalAlpha = Math.max(0, pt.life);
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
+        // Textes flottants lors des collisions
+        for (let i = popups.length - 1; i >= 0; i--) {
+            const pop = popups[i];
+            pop.y -= dt * 42;
+            pop.life -= dt * 0.95;
+            if (pop.life <= 0) {
+                popups.splice(i, 1);
+                continue;
+            }
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, pop.life);
+            ctx.font = '600 13px Inter, sans-serif';
+            const textW = ctx.measureText(pop.text).width;
+            ctx.fillStyle = pop.bonus ? '#2C3E35' : '#1C1B19';
+            ctx.beginPath();
+            ctx.roundRect(pop.x - textW / 2 - 10, pop.y - 13, textW + 20, 26, 99);
+            ctx.fill();
+
+            ctx.fillStyle = '#FAF8F5';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pop.text, pop.x, pop.y);
+            ctx.restore();
+        }
+
+        ctx.restore();
+
+        // Mise à jour du HUD supérieur
+        const pct = Math.floor(altitude);
+        fsAltText.textContent = `${pct}%`;
+        fsAltBar.style.width = `${pct}%`;
+        fsTimer.textContent = `☀️ ${Math.ceil(timeLeft)}s`;
+
+        if (isRunning) {
+            if (altitude >= 100) {
+                finishGame(true);
+            } else if (timeLeft <= 0) {
+                finishGame(false);
+            }
         }
 
         animId = requestAnimationFrame(loop);
@@ -401,6 +710,7 @@ function renderFerretGame(item) {
         canvas.removeEventListener('touchstart', onTouchStart);
         canvas.removeEventListener('touchmove', onTouchMove);
         canvas.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('resize', resizeCanvas);
     };
 }
 

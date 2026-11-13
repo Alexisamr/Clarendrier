@@ -2,25 +2,22 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <!-- Optimisation iPhone 13 : gestion de l'encoche (viewport-fit=cover) et blocage du zoom accidentel -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <!-- Configuration Web App iOS (Écran d'accueil) -->
+    <!-- Configuration Web App iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Calendrier">
     <link rel="apple-touch-icon" href="assets/icon.png">
     
-    <!-- Manifest PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#FAF8F5">
 
     <title>Calendrier de l'Avent</title>
 
-    <!-- Typographies sobres : Cormorant Garamond (Titres/Chiffres) & Inter (Texte) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -33,11 +30,10 @@
             <p class="progress-text" id="progress-text">0 sur 24 découverts</p>
         </header>
 
-        <!-- Grille des 24 jours générée par JS -->
         <section class="calendar-grid" id="calendar-grid"></section>
     </main>
 
-    <!-- Fenêtre modale (tiroir bas style iOS) pour afficher le contenu d'une case -->
+    <!-- Tiroir Modal (Bottom Sheet) -->
     <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
         <div class="modal-sheet">
             <div class="modal-handle"></div>
@@ -45,12 +41,45 @@
             <div class="modal-content">
                 <span class="modal-day" id="modal-day">Jour 1</span>
                 <h2 class="modal-title" id="modal-title">Titre du jour</h2>
-                <div class="modal-body" id="modal-body">Contenu du jour...</div>
+                <div class="modal-body" id="modal-body"></div>
             </div>
         </div>
     </div>
 
-    <!-- Notification discrète si la case est encore verrouillée -->
+    <!-- Conteneur Plein Écran pour les Mini-Jeux -->
+    <div class="fs-game-overlay" id="fs-game-overlay" aria-hidden="true">
+        <canvas id="ferret-canvas"></canvas>
+
+        <!-- HUD en haut (avec respect de l'encoche iPhone 13) -->
+        <div class="fs-hud">
+            <div class="fs-stats">
+                <div class="fs-stat-label">
+                    <span>Ascension de la dune</span>
+                    <span id="fs-alt-text">0%</span>
+                </div>
+                <div class="fs-progress-bar">
+                    <div class="fs-progress-fill" id="fs-alt-bar"></div>
+                </div>
+            </div>
+
+            <div class="fs-timer-pill" id="fs-timer">☀️ 22s</div>
+
+            <!-- Croix en haut à droite pour quitter quand on veut -->
+            <button class="fs-close-btn" id="fs-close-btn" aria-label="Quitter le jeu">&times;</button>
+        </div>
+
+        <!-- Indication en bas de l'écran -->
+        <div class="fs-hint" id="fs-hint">Glisse ton doigt pour éviter les pièges</div>
+
+        <!-- Écran de fin (Victoire / Nuit tombée) par-dessus le jeu -->
+        <div class="fs-end-card" id="fs-end-card">
+            <span class="fs-end-badge" id="fs-end-badge">Cap Ferret</span>
+            <h3 class="fs-end-title" id="fs-end-title">Sommet atteint !</h3>
+            <p class="fs-end-desc" id="fs-end-desc"></p>
+            <button class="btn-sober" id="fs-end-btn">Continuer</button>
+        </div>
+    </div>
+
     <div class="toast" id="toast">Patience...</div>
 
     <script src="script.js"></script>

@@ -251,6 +251,60 @@
         </div>
     </div>
 
+    <!-- Conteneur Plein Écran pour le Quiz « Tu te souviens de notre été ? » -->
+    <div class="fs-quiz-overlay" id="fs-quiz-overlay" aria-hidden="true">
+        <div class="fs-quiz-topbar">
+            <div class="fs-quiz-progress" id="fs-quiz-progress">
+                <span class="fs-quiz-step-label" id="fs-quiz-step-label">Question 1 / 4</span>
+                <div class="fs-quiz-dots" id="fs-quiz-dots"></div>
+            </div>
+            <button class="fs-quiz-close-btn" id="fs-quiz-close-btn" aria-label="Quitter le quiz">&times;</button>
+        </div>
+
+        <div class="fs-quiz-scroll">
+            <!-- Carte des questions -->
+            <div class="fs-quiz-card" id="fs-quiz-card">
+                <div class="gate-festive-top" aria-hidden="true">
+                    <svg width="110" height="44" viewBox="0 0 120 48" fill="none">
+                        <line x1="18" y1="22" x2="46" y2="22" stroke="#C59B5F" stroke-width="0.9" opacity="0.55"/>
+                        <line x1="74" y1="22" x2="102" y2="22" stroke="#C59B5F" stroke-width="0.9" opacity="0.55"/>
+                        <path d="M51 20C44 13 36 16 40 23C43 26 48 24 51 20Z" fill="#1E352B"/>
+                        <path d="M69 20C76 13 84 16 80 23C77 26 72 24 69 20Z" fill="#1E352B"/>
+                        <circle cx="57" cy="17" r="3" fill="#9E2A2B"/>
+                        <circle cx="63" cy="17" r="3" fill="#9E2A2B"/>
+                        <circle cx="60" cy="13.5" r="2.8" fill="#B83B3B"/>
+                        <path d="M60 24L61.4 28.6L66 30L61.4 31.4L60 36L58.6 31.4L54 30L58.6 28.6L60 24Z" fill="#C59B5F"/>
+                    </svg>
+                </div>
+
+                <span class="fs-quiz-kicker" id="fs-quiz-kicker">Tu te souviens de notre été ?</span>
+                <h2 class="fs-quiz-question" id="fs-quiz-question"></h2>
+
+                <div class="fs-quiz-interaction" id="fs-quiz-interaction"></div>
+
+                <div class="fs-quiz-feedback" id="fs-quiz-feedback" hidden></div>
+
+                <button type="button" class="btn-sober fs-quiz-next-btn" id="fs-quiz-next-btn" hidden>
+                    Passer à la question suivante
+                </button>
+            </div>
+
+            <!-- Pop-up finale du Quiz avec l'image cap.png -->
+            <div class="fs-quiz-final-card" id="fs-quiz-final-card" hidden>
+                <span class="fs-quiz-kicker">Souvenir d'été • Cap Ferret</span>
+                <div class="fs-quiz-photo-frame">
+                    <img src="/assets/cap.png" alt="Souvenir Cap Ferret" class="fs-quiz-photo" />
+                </div>
+                <p class="fs-quiz-final-msg" id="fs-quiz-final-msg">
+                    quizz terminé a demain ! (ce bunker dans mon cœur vrmt)
+                </p>
+                <button type="button" class="btn-sober" id="fs-quiz-finish-btn">
+                    Retour au calendrier
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast">Patience...</div>
 
     <script type="module" src="/script.js"></script>

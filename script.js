@@ -6,6 +6,10 @@ const DEV_MODE = true;
 const STORAGE_KEY = 'advent_opened_days_v1';
 const GAMES_WON_KEY = 'advent_games_won_v1';
 const GATE_AUTH_KEY = 'advent_gate_auth_v1';
+const QUIZ_ANSWERS_KEY = 'advent_quiz_ete_answers_v1';
+// Canal privé cloud (sans inscription) permettant à Alexis de recevoir et lire à distance
+// ce que Clara tape sur son téléphone aux questions libres 1 et 4 :
+const QUIZ_SYNC_TOPIC = 'clarendrier_alexis_clara_quiz_2025_v1';
 
 /* =========================================================================
    CONFIGURATION DE LA QUESTION D'ACCÈS (ROTATION & MÉMORISATION)
@@ -33,29 +37,121 @@ const GATE_QUESTIONS = [
     // }
 ];
 
+/* =========================================================================
+   ASSIGNATION FACILE DES SURPRISES PAR JOUR
+   - Pour déplacer n'importe quelle surprise vers un autre jour plus tard
+     (ex: mettre la surprise du jour 4 au jour 20), change simplement le numéro ici !
+   ========================================================================= */
+const DAY_ASSIGNMENTS = {
+    3: 'quiz_ete',      // Jour 3 : Quiz « Tu te souviens de notre été ? »
+    4: 'ferret_dune'    // Jour 4 : Mini-jeu « L'Ascension de la Dune » (Cap Ferret)
+};
+
+/* =========================================================================
+   CATALOGUE DES SURPRISES INTERCHANGEABLES
+   ========================================================================= */
+const SURPRISES_CATALOG = {
+    quiz_ete: {
+        game: "quiz_ete",
+        gameTitle: "Tu te souviens de notre été ?",
+        gameSubtitle: "Quiz Souvenirs • 4 Questions",
+        finalImage: "/assets/cap.png",
+        finalMessage: "quizz terminé a demain ! (ce bunker dans mon cœur vrmt)",
+        content: `quizz terminé a demain ! (ce bunker dans mon cœur vrmt)`,
+        questions: [
+            {
+                id: "q1_mont_lachat",
+                shortTitle: "Question 1 • Livre d'Or de la Croix du Mont Lachat (Annecy)",
+                question: "Première question sérieuse (promis les autres ne le sont pas) Que pense tu que j'ai mis dans le livre d'Or de la Croix du Mont Lachat à coté d'Annecy ?",
+                type: "text",
+                placeholder: "Écris ce que tu penses ici...",
+                feedback: "C'est bien noté dans mon petit carnet ❤️"
+            },
+            {
+                id: "q2_arrivee_cap",
+                shortTitle: "Question 2 • Arrivée au Cap",
+                question: "Quel est la première chose que j'ai faite en arrivant au cap ?",
+                type: "choice",
+                options: [
+                    {
+                        label: "Je me suis enfuis (ta grand mère me faisait trop peur)",
+                        isCorrect: false,
+                        feedback: "alors oui c'est vrai ta grand mère me fait peur mais c'est pas ça."
+                    },
+                    {
+                        label: "un bon petit pipi",
+                        isCorrect: false,
+                        feedback: "nan ça c'était sur le bunker (heureusement que tu m'a aidé (j'aurais besoin de ton aide de nouveau))"
+                    },
+                    {
+                        label: "un bon gros caca",
+                        isCorrect: false,
+                        feedback: "malheureusement non je suis trop bien élever pour m'abaisser a ce niveau de répugnantise (spoiler : ruben va le faire à jade)"
+                    },
+                    {
+                        label: "aucune de ces trois réponses",
+                        isCorrect: true,
+                        feedback: "Bonne réponse mais désolé ça n'était aucune de ces réponses moi même je m'en souviens plus mais regarde ce que je t'ai mis quand tu met les mauvaises réponses."
+                    }
+                ]
+            },
+            {
+                id: "q3_mot_maxime",
+                shortTitle: "Question 3 • Le mot de Maxime",
+                question: "Quel était la mot préférer de Maxime durant ce séjour.",
+                type: "choice",
+                options: [
+                    {
+                        label: "alcool",
+                        isCorrect: false,
+                        feedback: "eh nan c'est toi ça (t'es mon alcoolique à moi)"
+                    },
+                    {
+                        label: "eh mamie",
+                        isCorrect: true,
+                        feedback: "Bonne réponse ! C'était bien « eh mamie » !"
+                    },
+                    {
+                        label: "finalement",
+                        isCorrect: false,
+                        feedback: "nan ça c'est mon mot pref."
+                    }
+                ]
+            },
+            {
+                id: "q4_prochaines_vacances",
+                shortTitle: "Question 4 • Nos prochaines vacances tous les deux",
+                question: "Quand est-ce qu'on re part en vaccances tout les deux ?",
+                type: "text",
+                placeholder: "Dis-moi quand...",
+                feedback: "C'est promis, je note ça précieusement ❤️"
+            }
+        ]
+    },
+
+    ferret_dune: {
+        game: "ferret",
+        gameTitle: "L'Ascension de la Dune",
+        gameSubtitle: "Défi Cap Ferret",
+        content: `Merci pour ces vacances au Cap Ferret ❤️`
+    }
+};
+
 const calendarData = Array.from({ length: 24 }, (_, i) => {
     const day = i + 1;
+    const assignedKey = DAY_ASSIGNMENTS[day];
 
-    if (day === 4) {
+    if (assignedKey && SURPRISES_CATALOG[assignedKey]) {
         return {
-            day: 4,
-            game: "ferret",
-            gameTitle: "L'Ascension de la Dune",
-            gameSubtitle: "Défi Cap Ferret",
-            content: `Merci pour ces vacances au Cap Ferret ❤️`
-        };
-    }
-
-    if (day === 20) {
-        return {
-            day: 20,
-            game: null,
-            content: `Voici le petit mot ou l'indice pour la journée du 20 décembre.`
+            day,
+            surpriseKey: assignedKey,
+            ...SURPRISES_CATALOG[assignedKey]
         };
     }
 
     return {
         day: day,
+        game: null,
         content: `Voici le petit mot ou l'indice pour la journée du ${day} décembre.`
     };
 });
@@ -79,7 +175,7 @@ const gateForm = document.getElementById('gate-form');
 const gateInput = document.getElementById('gate-input');
 const gateError = document.getElementById('gate-error');
 
-// Éléments Plein Écran
+// Éléments Plein Écran (Jeu Dune Cap Ferret)
 const fsOverlay = document.getElementById('fs-game-overlay');
 const fsCloseBtn = document.getElementById('fs-close-btn');
 const fsAltText = document.getElementById('fs-alt-text');
@@ -91,6 +187,21 @@ const fsEndBadge = document.getElementById('fs-end-badge');
 const fsEndTitle = document.getElementById('fs-end-title');
 const fsEndDesc = document.getElementById('fs-end-desc');
 const fsEndBtn = document.getElementById('fs-end-btn');
+
+// Éléments Plein Écran (Quiz « Tu te souviens de notre été ? »)
+const fsQuizOverlay = document.getElementById('fs-quiz-overlay');
+const fsQuizCloseBtn = document.getElementById('fs-quiz-close-btn');
+const fsQuizStepLabel = document.getElementById('fs-quiz-step-label');
+const fsQuizDots = document.getElementById('fs-quiz-dots');
+const fsQuizCard = document.getElementById('fs-quiz-card');
+const fsQuizKicker = document.getElementById('fs-quiz-kicker');
+const fsQuizQuestion = document.getElementById('fs-quiz-question');
+const fsQuizInteraction = document.getElementById('fs-quiz-interaction');
+const fsQuizFeedback = document.getElementById('fs-quiz-feedback');
+const fsQuizNextBtn = document.getElementById('fs-quiz-next-btn');
+const fsQuizFinalCard = document.getElementById('fs-quiz-final-card');
+const fsQuizFinalMsg = document.getElementById('fs-quiz-final-msg');
+const fsQuizFinishBtn = document.getElementById('fs-quiz-finish-btn');
 
 let toastTimeout;
 
@@ -142,6 +253,21 @@ function initGate() {
     gateForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const userVal = normalizeAnswer(gateInput.value);
+
+        // Mot de passe secret pour Alexis s'il veut voir les réponses de Clara dès l'accueil
+        if (userVal === 'alexis' || userVal === 'admin') {
+            localStorage.setItem(GATE_AUTH_KEY, JSON.stringify({
+                unlockedAt: Date.now()
+            }));
+            gateError.textContent = '';
+            gateInput.blur();
+            gateOverlay.style.transition = '';
+            gateOverlay.classList.add('unlocked');
+            gateOverlay.setAttribute('aria-hidden', 'true');
+            openSecretAnswersModal();
+            return;
+        }
+
         const isValid = activeQ.answers.some((ans) => normalizeAnswer(ans) === userVal);
 
         if (isValid) {
@@ -185,7 +311,286 @@ function stopActiveGame() {
     }
 }
 
-/* Ouvre la modale du jour avec la petite box cliquable pour le jeu */
+/* =========================================================================
+   SAUVEGARDE & SYNCHRONISATION À DISTANCE DES RÉPONSES LIBRES DE CLARA
+   - Sauvegarde locale dans localStorage
+   - Envoi silencieux en arrière-plan sur le canal cloud pour qu'Alexis
+     puisse lire les réponses depuis son propre téléphone (en touchant 3 fois
+     « Pour ma Clara » en bas de la page ou en tapant "alexis" à l'entrée)
+   ========================================================================= */
+function getSavedQuizAnswers() {
+    try {
+        return JSON.parse(localStorage.getItem(QUIZ_ANSWERS_KEY)) || {};
+    } catch {
+        return {};
+    }
+}
+
+function saveAndSyncQuizAnswer(questionId, shortTitle, answerText) {
+    const cleaned = (answerText || '').trim();
+    if (!cleaned) return;
+
+    const current = getSavedQuizAnswers();
+    const entry = {
+        questionId,
+        shortTitle,
+        answer: cleaned,
+        date: new Date().toLocaleString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        }),
+        timestamp: Date.now()
+    };
+    current[questionId] = entry;
+    localStorage.setItem(QUIZ_ANSWERS_KEY, JSON.stringify(current));
+
+    // Envoi silencieux sur le canal cloud pour qu'Alexis puisse les voir depuis son téléphone
+    try {
+        fetch(`https://ntfy.sh/${QUIZ_SYNC_TOPIC}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain;charset=UTF-8',
+                'Title': `Reponse de Clara - ${shortTitle}`
+            },
+            body: JSON.stringify(entry)
+        }).catch(() => {});
+    } catch {
+        // Ignore si hors-ligne
+    }
+}
+
+async function openSecretAnswersModal() {
+    modalDay.textContent = `Carnet secret • Réponses de Clara`;
+    modalBody.innerHTML = `<div style="font-size:0.88rem;color:var(--text-secondary);">Récupération des réponses de Clara…</div>`;
+    modalOverlay.classList.add('active');
+    modalOverlay.setAttribute('aria-hidden', 'false');
+
+    const combinedMap = { ...getSavedQuizAnswers() };
+
+    try {
+        const res = await fetch(`https://ntfy.sh/${QUIZ_SYNC_TOPIC}/json?poll=1`);
+        if (res.ok) {
+            const text = await res.text();
+            const lines = text.split('\n').filter(Boolean);
+            lines.forEach((line) => {
+                try {
+                    const pkt = JSON.parse(line);
+                    if (pkt && pkt.event === 'message' && pkt.message) {
+                        const parsed = JSON.parse(pkt.message);
+                        if (parsed && parsed.questionId && parsed.answer) {
+                            const existing = combinedMap[parsed.questionId];
+                            if (!existing || (parsed.timestamp || 0) >= (existing.timestamp || 0)) {
+                                combinedMap[parsed.questionId] = parsed;
+                            }
+                        }
+                    }
+                } catch {
+                    // Ignore ligne malformée
+                }
+            });
+        }
+    } catch {
+        // Fallback sur localStorage si pas de réseau
+    }
+
+    const entries = Object.values(combinedMap);
+    if (!entries.length) {
+        modalBody.innerHTML = `
+            <div style="padding:12px 0;color:var(--text-secondary);">
+                Clara n'a pas encore répondu aux questions libres (Question 1 et Question 4).
+                Dès qu'elle aura validé ses réponses sur son téléphone, elles s'afficheront ici !
+            </div>
+        `;
+        return;
+    }
+
+    const listEl = document.createElement('div');
+    listEl.className = 'secret-answers-list';
+
+    entries.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'secret-answer-item';
+        div.innerHTML = `
+            <div class="secret-answer-q">${item.shortTitle || item.questionId}</div>
+            <div class="secret-answer-a"></div>
+            <div class="secret-answer-date">Enregistré le ${item.date || ''}</div>
+        `;
+        div.querySelector('.secret-answer-a').textContent = item.answer;
+        listEl.appendChild(div);
+    });
+
+    modalBody.innerHTML = '';
+    modalBody.appendChild(listEl);
+}
+
+/* =========================================================================
+   QUIZ PLEIN ÉCRAN : « TU TE SOUVIENS DE NOTRE ÉTÉ ? »
+   ========================================================================= */
+function closeFullscreenQuiz() {
+    fsQuizOverlay.classList.remove('active');
+    fsQuizOverlay.setAttribute('aria-hidden', 'true');
+}
+
+if (fsQuizCloseBtn) {
+    fsQuizCloseBtn.addEventListener('click', closeFullscreenQuiz);
+}
+if (fsQuizFinishBtn) {
+    fsQuizFinishBtn.addEventListener('click', closeFullscreenQuiz);
+}
+
+function launchFullscreenQuiz(item) {
+    stopActiveGame();
+    const questions = item.questions || [];
+    if (!questions.length) return;
+
+    let currentIndex = 0;
+
+    fsQuizOverlay.classList.add('active');
+    fsQuizOverlay.setAttribute('aria-hidden', 'false');
+    fsQuizCard.hidden = false;
+    fsQuizFinalCard.hidden = true;
+
+    function renderDots() {
+        fsQuizDots.innerHTML = '';
+        questions.forEach((_, idx) => {
+            const dot = document.createElement('span');
+            dot.className = 'fs-quiz-dot';
+            if (idx < currentIndex) dot.classList.add('done');
+            else if (idx === currentIndex) dot.classList.add('active');
+            fsQuizDots.appendChild(dot);
+        });
+    }
+
+    function renderCurrentQuestion() {
+        const q = questions[currentIndex];
+        fsQuizStepLabel.textContent = `Question ${currentIndex + 1} / ${questions.length}`;
+        fsQuizKicker.textContent = item.gameTitle || 'Tu te souviens de notre été ?';
+        fsQuizQuestion.textContent = q.question;
+        fsQuizInteraction.innerHTML = '';
+        fsQuizFeedback.hidden = true;
+        fsQuizFeedback.textContent = '';
+        fsQuizFeedback.className = 'fs-quiz-feedback';
+        fsQuizNextBtn.hidden = true;
+        fsQuizNextBtn.textContent = (currentIndex === questions.length - 1)
+            ? 'Voir la surprise finale'
+            : 'Passer à la question suivante';
+
+        renderDots();
+
+        if (q.type === 'text') {
+            const saved = getSavedQuizAnswers()[q.id];
+            const textarea = document.createElement('textarea');
+            textarea.className = 'quiz-textarea';
+            textarea.placeholder = q.placeholder || 'Écris ta réponse ici...';
+            if (saved && saved.answer) {
+                textarea.value = saved.answer;
+            }
+
+            const validateBtn = document.createElement('button');
+            validateBtn.type = 'button';
+            validateBtn.className = 'btn-sober';
+            validateBtn.textContent = 'Valider ma réponse';
+
+            const handleValidate = () => {
+                const val = textarea.value.trim();
+                if (!val) {
+                    fsQuizFeedback.hidden = false;
+                    fsQuizFeedback.className = 'fs-quiz-feedback is-wrong';
+                    fsQuizFeedback.textContent = 'Écris un petit mot avant de valider 😊';
+                    textarea.focus();
+                    return;
+                }
+
+                saveAndSyncQuizAnswer(q.id, q.shortTitle || `Question ${currentIndex + 1}`, val);
+                textarea.blur();
+
+                fsQuizFeedback.hidden = false;
+                fsQuizFeedback.className = 'fs-quiz-feedback is-correct';
+                fsQuizFeedback.textContent = q.feedback || 'Réponse enregistrée ❤️';
+                validateBtn.hidden = true;
+                fsQuizNextBtn.hidden = false;
+            };
+
+            validateBtn.addEventListener('click', handleValidate);
+            fsQuizInteraction.appendChild(textarea);
+            fsQuizInteraction.appendChild(validateBtn);
+        } else if (q.type === 'choice') {
+            let hasUnlockedNext = false;
+
+            q.options.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'quiz-option-btn';
+                btn.textContent = opt.label;
+
+                btn.addEventListener('click', () => {
+                    // On laisse les boutons cliquables même après avoir trouvé la bonne réponse
+                    // pour que Clara puisse lire les phrases drôles des mauvaises réponses !
+                    Array.from(fsQuizInteraction.querySelectorAll('.quiz-option-btn')).forEach((b) => {
+                        if (b !== btn && !b.dataset.correctClicked) {
+                            b.classList.remove('selected-wrong');
+                        }
+                    });
+
+                    fsQuizFeedback.hidden = false;
+                    fsQuizFeedback.textContent = opt.feedback;
+
+                    if (opt.isCorrect) {
+                        btn.classList.remove('selected-wrong');
+                        btn.classList.add('selected-correct');
+                        btn.dataset.correctClicked = 'true';
+                        fsQuizFeedback.className = 'fs-quiz-feedback is-correct';
+                        hasUnlockedNext = true;
+                        fsQuizNextBtn.hidden = false;
+                    } else {
+                        btn.classList.add('selected-wrong');
+                        fsQuizFeedback.className = 'fs-quiz-feedback is-wrong';
+                        if (hasUnlockedNext) {
+                            fsQuizNextBtn.hidden = false;
+                        }
+                    }
+                });
+
+                fsQuizInteraction.appendChild(btn);
+            });
+        }
+    }
+
+    fsQuizNextBtn.onclick = () => {
+        if (currentIndex < questions.length - 1) {
+            currentIndex++;
+            renderCurrentQuestion();
+        } else {
+            // Fin du quiz : on enregistre la victoire et on ouvre la pop-up finale avec cap.png
+            if (!gamesWon.includes(item.day)) {
+                gamesWon.push(item.day);
+                localStorage.setItem(GAMES_WON_KEY, JSON.stringify(gamesWon));
+            }
+            fsQuizStepLabel.textContent = 'Quiz terminé !';
+            fsQuizDots.innerHTML = '';
+            questions.forEach(() => {
+                const dot = document.createElement('span');
+                dot.className = 'fs-quiz-dot done';
+                fsQuizDots.appendChild(dot);
+            });
+
+            fsQuizCard.hidden = true;
+            fsQuizFinalCard.hidden = false;
+            if (fsQuizFinalMsg) {
+                fsQuizFinalMsg.textContent = item.finalMessage || 'quizz terminé a demain ! (ce bunker dans mon cœur vrmt)';
+            }
+
+            // Met à jour la modale du jour en arrière-plan
+            openModal(item);
+        }
+    };
+
+    renderCurrentQuestion();
+}
+
+/* Ouvre la modale du jour avec la petite box cliquable pour le jeu ou le quiz */
 function openModal(item) {
     modalDay.textContent = `${item.day} Décembre`;
     modalBody.innerHTML = '';
@@ -219,6 +624,36 @@ function openModal(item) {
             launchFullscreenFerretGame(item);
         });
         modalBody.appendChild(launchBox);
+    } else if (item.game === 'quiz_ete') {
+        if (hasWon) {
+            const wonWrap = document.createElement('div');
+            wonWrap.style.marginBottom = '16px';
+            wonWrap.innerHTML = `
+                <div class="fs-quiz-photo-frame" style="margin: 4px 0 12px;">
+                    <img src="${item.finalImage || '/assets/cap.png'}" alt="Souvenir Cap Ferret" class="fs-quiz-photo" style="max-height: 240px;" />
+                </div>
+                <div style="font-family: var(--font-serif); font-size: 1.25rem; font-weight: 600; color: var(--text-primary);">
+                    ${item.finalMessage}
+                </div>
+            `;
+            modalBody.appendChild(wonWrap);
+        }
+
+        const quizBox = document.createElement('div');
+        quizBox.className = 'quiz-launch-box';
+        quizBox.innerHTML = `
+            <div class="quiz-launch-content">
+                <span class="quiz-launch-tag">${item.gameSubtitle}</span>
+                <h3 class="quiz-launch-title">${item.gameTitle}</h3>
+                <div class="game-launch-cta">
+                    <span>${hasWon ? '↺ Refaire le quiz en plein écran' : '▶ Commencer le quiz'}</span>
+                </div>
+            </div>
+        `;
+        quizBox.addEventListener('click', () => {
+            launchFullscreenQuiz(item);
+        });
+        modalBody.appendChild(quizBox);
     } else {
         modalBody.innerHTML = `<div>${item.content}</div>`;
     }
@@ -1683,13 +2118,35 @@ modalOverlay.addEventListener('click', (e) => {
 
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        if (fsOverlay.classList.contains('active')) {
+        if (fsQuizOverlay && fsQuizOverlay.classList.contains('active')) {
+            closeFullscreenQuiz();
+        } else if (fsOverlay.classList.contains('active')) {
             closeFullscreenGame();
         } else if (modalOverlay.classList.contains('active')) {
             closeModal();
         }
     }
 });
+
+// Astuce discrète pour Alexis : toucher 3 fois rapidement « Pour ma Clara » en bas de la page
+// ouvre le carnet avec les réponses libres que Clara a tapées aux questions 1 et 4 !
+const footerEl = document.querySelector('.app-footer');
+if (footerEl) {
+    let tapCount = 0;
+    let tapTimer = null;
+    footerEl.addEventListener('click', () => {
+        tapCount++;
+        clearTimeout(tapTimer);
+        if (tapCount >= 3) {
+            tapCount = 0;
+            openSecretAnswersModal();
+        } else {
+            tapTimer = setTimeout(() => {
+                tapCount = 0;
+            }, 650);
+        }
+    });
+}
 
 /* =========================================================================
    PHYSIQUE GRAVITAIRE DES BOULES DE NOËL SUSPENDUES (PENDULE + ÉLASTICITÉ)

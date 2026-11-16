@@ -1323,3 +1323,536 @@ body {
     color: var(--text-muted);
     margin-top: 6px;
 }
+
+/* --- BOX D'APERÇU DU COUPON À DÉCOUPER DANS LA MODALE --- */
+.coupon-launch-box {
+    margin-top: 14px;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1px dashed var(--gold-accent);
+    background: linear-gradient(145deg, #9E2A2B 0%, #7E1F20 100%);
+    padding: 22px 20px;
+    color: #FAF7F2;
+    box-shadow: 0 14px 30px -8px rgba(158, 42, 43, 0.28);
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+    .coupon-launch-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px -8px rgba(158, 42, 43, 0.36);
+    }
+}
+
+.coupon-launch-box:active {
+    transform: scale(0.97);
+}
+
+/* Mini aperçu du ticket déjà découpé dans la modale */
+.coupon-mini-preview {
+    background: linear-gradient(165deg, #FFFFFF 0%, #FAF5EC 100%);
+    border: 1px solid var(--gold-accent);
+    border-radius: 18px;
+    padding: 18px 16px;
+    margin-bottom: 14px;
+    position: relative;
+    box-shadow: 0 8px 22px -6px rgba(26, 33, 30, 0.08);
+}
+
+.coupon-mini-kicker {
+    display: block;
+    font-size: 0.64rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--christmas-red);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.coupon-mini-title {
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text-primary);
+}
+
+.coupon-mini-clause {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* --- MODE PLEIN ÉCRAN : TICKET / COUPON À DÉCOUPER --- */
+.fs-coupon-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    background-color: var(--bg-color);
+    background-image:
+        radial-gradient(circle at 50% 15%, rgba(232, 213, 181, 0.48) 0%, transparent 58%),
+        radial-gradient(circle at 20% 85%, rgba(158, 42, 43, 0.07) 0%, transparent 50%);
+    z-index: 830;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    touch-action: none;
+}
+
+.fs-coupon-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.fs-coupon-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 22px calc(env(safe-area-inset-bottom, 24px) + 28px);
+    position: relative;
+    overflow-y: auto;
+}
+
+.coupon-sparkles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 15;
+}
+
+.coupon-sparkle-dot {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: couponSparkleFly 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes couponSparkleFly {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--tx, 0px), var(--ty, -60px)) scale(0.2);
+    }
+}
+
+.coupon-ticket {
+    width: 100%;
+    max-width: 390px;
+    position: relative;
+    z-index: 5;
+    filter: drop-shadow(0 22px 38px rgba(26, 33, 30, 0.12));
+}
+
+/* Partie haute : Talon à détacher */
+.coupon-stub {
+    background: linear-gradient(145deg, #9E2A2B 0%, #7D2021 100%);
+    color: #FAF7F2;
+    border: 1px solid var(--gold-accent);
+    border-bottom: none;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    padding: 18px 22px 16px;
+    text-align: center;
+    transform-origin: top right;
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
+    position: relative;
+}
+
+.coupon-ticket.theme-pine .coupon-stub {
+    background: linear-gradient(145deg, #1E352B 0%, #15271F 100%);
+}
+
+.coupon-ticket.is-torn .coupon-stub {
+    transform: translate(26px, -48px) rotate(11deg) scale(0.94);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.coupon-stub-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+    opacity: 0.9;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.coupon-stub-title {
+    font-family: var(--font-serif);
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #FFFFFF;
+}
+
+.coupon-stub-sub {
+    font-size: 0.74rem;
+    color: rgba(250, 247, 242, 0.8);
+    margin-top: 2px;
+}
+
+/* Zone de découpe avec encoches demi-cercle à gauche et à droite */
+.coupon-perforation-zone {
+    position: relative;
+    height: 38px;
+    background-color: #FFFFFF;
+    border-left: 1px solid var(--gold-accent);
+    border-right: 1px solid var(--gold-accent);
+    display: flex;
+    align-items: center;
+    padding: 0 22px;
+    user-select: none;
+    touch-action: none;
+}
+
+.coupon-notch {
+    position: absolute;
+    top: 50%;
+    width: 24px;
+    height: 24px;
+    background-color: var(--bg-color);
+    border-radius: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    border: 1px solid var(--gold-accent);
+}
+
+.coupon-notch.left {
+    left: -13px;
+    clip-path: polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%);
+}
+
+.coupon-notch.right {
+    right: -13px;
+    clip-path: polygon(0% 0%, 50% 0%, 50% 100%, 0% 100%);
+}
+
+.coupon-dash-track {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.coupon-dash-line {
+    width: 100%;
+    height: 0;
+    border-top: 2px dashed rgba(197, 155, 95, 0.55);
+}
+
+.coupon-cut-line {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--christmas-red), var(--gold-accent));
+    border-radius: 99px;
+}
+
+.coupon-scissors-handle {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #C59B5F 0%, #A97E43 100%);
+    color: #FFFFFF;
+    border: 2px solid #FAF7F2;
+    box-shadow: 0 6px 16px rgba(26, 33, 30, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    z-index: 6;
+    transition: box-shadow 0.2s ease, opacity 0.3s ease;
+    touch-action: none;
+}
+
+.coupon-scissors-handle:active {
+    cursor: grabbing;
+    box-shadow: 0 8px 22px rgba(158, 42, 43, 0.35);
+}
+
+.coupon-ticket.is-torn .coupon-scissors-handle {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Partie basse : Corps principal du Bon Cadeau */
+.coupon-body {
+    background: linear-gradient(165deg, #FFFFFF 0%, #FCF8F0 100%);
+    border: 1px solid var(--gold-accent);
+    border-top: none;
+    border-bottom-left-radius: 22px;
+    border-bottom-right-radius: 22px;
+    padding: 24px 24px 26px;
+    position: relative;
+    overflow: hidden;
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: border-radius 0.4s ease, border-top 0.3s ease;
+}
+
+.coupon-ticket.is-torn .coupon-perforation-zone {
+    border-top: 2px dashed var(--gold-accent);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    height: 18px;
+    transition: height 0.35s ease;
+}
+
+/* Voile mystère avant découpe */
+.coupon-mystery-veil {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(165deg, rgba(250, 247, 242, 0.96) 0%, rgba(243, 237, 227, 0.98) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+    transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.coupon-ticket.is-torn .coupon-mystery-veil {
+    opacity: 0;
+    transform: scale(1.05);
+    pointer-events: none;
+}
+
+.coupon-wax-seal {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #B33637 0%, #8E2223 70%, #6E1819 100%);
+    border: 2px solid var(--gold-accent);
+    box-shadow: 0 8px 20px rgba(158, 42, 43, 0.28), inset 0 2px 6px rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.coupon-veil-text {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.12rem;
+    color: var(--text-secondary);
+    max-width: 250px;
+    line-height: 1.4;
+}
+
+/* Contenu révélé du Bon Cadeau */
+.coupon-revealed-content {
+    text-align: center;
+    opacity: 0.15;
+    transform: translateY(6px) scale(0.98);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.coupon-ticket.is-torn .coupon-revealed-content {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.coupon-crest {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.coupon-badge {
+    display: inline-block;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--christmas-red);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.coupon-main-title {
+    font-family: var(--font-serif);
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1.22;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    text-wrap: balance;
+}
+
+.coupon-clause {
+    font-size: 0.85rem;
+    font-style: italic;
+    line-height: 1.48;
+    color: var(--text-secondary);
+    background-color: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+}
+
+.coupon-footer-row {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(197, 155, 95, 0.28);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.coupon-stamp {
+    display: inline-block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-color);
+    border: 1.5px solid var(--accent-color);
+    padding: 5px 10px;
+    border-radius: 6px;
+    transform: rotate(-2.5deg);
+    background-color: rgba(30, 53, 43, 0.05);
+}
+
+.coupon-barcode {
+    display: inline-flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 22px;
+    opacity: 0.55;
+}
+
+.coupon-barcode span {
+    display: block;
+    height: 100%;
+    width: 2px;
+    background-color: var(--text-primary);
+}
+
+.coupon-barcode span:nth-child(3n) {
+    width: 3.5px;
+}
+
+.coupon-barcode span:nth-child(4n+1) {
+    width: 1px;
+}
+
+.coupon-hint {
+    margin-top: 20px;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-align: center;
+    animation: couponHintPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes couponHintPulse {
+    0%, 100% { opacity: 0.65; }
+    50% { opacity: 1; }
+}
+
+.coupon-done-btn {
+    margin-top: 22px;
+    max-width: 390px;
+}
+
+/* --- MOT SECRET CLIQUABLE (JOUR 1 : REDIRECTION DIRECTE SPOTIFY) --- */
+.secret-music-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: linear-gradient(160deg, #FFFFFF 0%, #FAF4E8 100%);
+    border: 1px solid var(--gold-accent);
+    border-radius: 22px;
+    padding: 28px 22px;
+    margin-top: 8px;
+    box-shadow: 0 14px 32px -8px rgba(26, 33, 30, 0.12);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+@media (hover: hover) {
+    .secret-music-note:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 38px -8px rgba(158, 42, 43, 0.18);
+    }
+}
+
+.secret-music-note:active {
+    transform: scale(0.97);
+}
+
+.secret-music-seal {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #B33637 0%, #8E2223 70%, #6E1819 100%);
+    border: 1.5px solid var(--gold-accent);
+    box-shadow: 0 6px 16px rgba(158, 42, 43, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    animation: secretSealPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes secretSealPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+
+.secret-music-kicker {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--christmas-red);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.secret-music-title {
+    font-family: var(--font-serif);
+    font-size: 1.75rem;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--text-primary);
+    line-height: 1.25;
+}

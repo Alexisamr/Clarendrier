@@ -43,14 +43,50 @@ const GATE_QUESTIONS = [
      (ex: mettre la surprise du jour 4 au jour 20), change simplement le numéro ici !
    ========================================================================= */
 const DAY_ASSIGNMENTS = {
-    3: 'quiz_ete',      // Jour 3 : Quiz « Tu te souviens de notre été ? »
-    4: 'ferret_dune'    // Jour 4 : Mini-jeu « L'Ascension de la Dune » (Cap Ferret)
+    1: 'spotify_just_two_of_us', // Jour 1 : Petit mot secret cliquable -> Spotify « Just the Two of Us »
+    2: 'coupon_massage',         // Jour 2 : Ticket à découper « Bon pour un massage de tout le corps »
+    3: 'quiz_ete',               // Jour 3 : Quiz « Tu te souviens de notre été ? »
+    4: 'ferret_dune',            // Jour 4 : Mini-jeu « L'Ascension de la Dune » (Cap Ferret)
+    5: 'coupon_chanson'          // Jour 5 : Ticket à découper « Bon pour une chanson à 2 où JE chante »
 };
 
 /* =========================================================================
    CATALOGUE DES SURPRISES INTERCHANGEABLES
    ========================================================================= */
 const SURPRISES_CATALOG = {
+    spotify_just_two_of_us: {
+        game: "spotify_link",
+        secretKicker: "Petit mot secret",
+        secretLabel: "Clique sur moi, surprise",
+        spotifyUri: "spotify:track:5fdNHVZHbWB1AaXk4RBGVD",
+        spotifyWebUrl: "https://open.spotify.com/track/5fdNHVZHbWB1AaXk4RBGVD",
+        content: "Clique sur moi, surprise"
+    },
+
+    coupon_massage: {
+        game: "coupon",
+        theme: "red",
+        gameTitle: "Ticket Cadeau à Découper",
+        gameSubtitle: "Bon Exclusif • Pour ma Clara",
+        couponBadge: "BON CADEAU EXCLUSIF • N° 01",
+        couponTitle: "Bon pour un massage de tout le corps",
+        couponClause: "",
+        couponStamp: "VALABLE À VIE • SUR SIMPLE DEMANDE ❤️",
+        content: "Bon pour un massage de tout le corps"
+    },
+
+    coupon_chanson: {
+        game: "coupon",
+        theme: "pine",
+        gameTitle: "Ticket Cadeau à Découper",
+        gameSubtitle: "Bon Exclusif • Pour ma Clara",
+        couponBadge: "BON CADEAU EXCLUSIF • N° 02",
+        couponTitle: "Bon pour une chanson à 2 où JE chante (chippie va)",
+        couponClause: "(je choisie la musique parcontre hein faut pas abuser du loup qui se cache dans la bergerie)",
+        couponStamp: "BON OFFICIEL • APPROUVÉ ❤️",
+        content: "Bon pour une chanson à 2 où JE chante (chippie va)"
+    },
+
     quiz_ete: {
         game: "quiz_ete",
         gameTitle: "Tu te souviens de notre été ?",
@@ -203,6 +239,24 @@ const fsQuizFinalCard = document.getElementById('fs-quiz-final-card');
 const fsQuizFinalMsg = document.getElementById('fs-quiz-final-msg');
 const fsQuizFinishBtn = document.getElementById('fs-quiz-finish-btn');
 
+// Éléments Plein Écran (Tickets / Coupons à découper)
+const fsCouponOverlay = document.getElementById('fs-coupon-overlay');
+const fsCouponCloseBtn = document.getElementById('fs-coupon-close-btn');
+const couponTicket = document.getElementById('coupon-ticket');
+const couponStub = document.getElementById('coupon-stub');
+const couponSerialLeft = document.getElementById('coupon-serial-left');
+const couponSerialRight = document.getElementById('coupon-serial-right');
+const couponPerfZone = document.getElementById('coupon-perf-zone');
+const couponCutLine = document.getElementById('coupon-cut-line');
+const couponScissorsHandle = document.getElementById('coupon-scissors-handle');
+const couponBadge = document.getElementById('coupon-badge');
+const couponMainTitle = document.getElementById('coupon-main-title');
+const couponClause = document.getElementById('coupon-clause');
+const couponStamp = document.getElementById('coupon-stamp');
+const couponHint = document.getElementById('coupon-hint');
+const couponDoneBtn = document.getElementById('coupon-done-btn');
+const couponSparkles = document.getElementById('coupon-sparkles');
+
 let toastTimeout;
 
 function normalizeAnswer(str) {
@@ -326,15 +380,29 @@ function getSavedQuizAnswers() {
     }
 }
 
-function saveAndSyncQuizAnswer(questionId, shortTitle, answerText) {
+function saveAndSyncQuizAnswer(questionId, shortTitle, answerText, quizTitle = '') {
     const cleaned = (answerText || '').trim();
     if (!cleaned) return;
 
     const current = getSavedQuizAnswers();
+    const existing = current[questionId];
+
+    // Conserve l'historique de tous les choix cliqués par Clara sur une même question
+    const history = (existing && Array.isArray(existing.history)) ? [...existing.history] : [];
+    if (history[history.length - 1] !== cleaned) {
+        history.push(cleaned);
+    }
+
+    const formattedAnswer = history.length > 1
+        ? history.map((ans, idx) => `${idx === 0 ? '1er choix' : `Choix ${idx + 1}`} : ${ans}`).join('\n')
+        : cleaned;
+
     const entry = {
         questionId,
+        quizTitle,
         shortTitle,
-        answer: cleaned,
+        answer: formattedAnswer,
+        history,
         date: new Date().toLocaleString('fr-FR', {
             day: '2-digit',
             month: '2-digit',
@@ -346,7 +414,7 @@ function saveAndSyncQuizAnswer(questionId, shortTitle, answerText) {
     current[questionId] = entry;
     localStorage.setItem(QUIZ_ANSWERS_KEY, JSON.stringify(current));
 
-    // Envoi silencieux sur le canal cloud pour qu'Alexis puisse les voir depuis son téléphone
+    // Envoi silencieux sur le canal cloud pour qu'Alexis puisse voir toutes les réponses depuis son téléphone
     try {
         fetch(`https://ntfy.sh/${QUIZ_SYNC_TOPIC}`, {
             method: 'POST',
@@ -395,12 +463,12 @@ async function openSecretAnswersModal() {
         // Fallback sur localStorage si pas de réseau
     }
 
-    const entries = Object.values(combinedMap);
+    const entries = Object.values(combinedMap).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
     if (!entries.length) {
         modalBody.innerHTML = `
             <div style="padding:12px 0;color:var(--text-secondary);">
-                Clara n'a pas encore répondu aux questions libres (Question 1 et Question 4).
-                Dès qu'elle aura validé ses réponses sur son téléphone, elles s'afficheront ici !
+                Clara n'a pas encore répondu aux quiz.
+                Dès qu'elle cliquera ou écrira une réponse sur son téléphone, tout s'affichera ici !
             </div>
         `;
         return;
@@ -412,11 +480,15 @@ async function openSecretAnswersModal() {
     entries.forEach((item) => {
         const div = document.createElement('div');
         div.className = 'secret-answer-item';
+        const headerLabel = item.quizTitle
+            ? `${item.quizTitle} — ${item.shortTitle || item.questionId}`
+            : (item.shortTitle || item.questionId);
         div.innerHTML = `
-            <div class="secret-answer-q">${item.shortTitle || item.questionId}</div>
+            <div class="secret-answer-q"></div>
             <div class="secret-answer-a"></div>
             <div class="secret-answer-date">Enregistré le ${item.date || ''}</div>
         `;
+        div.querySelector('.secret-answer-q').textContent = headerLabel;
         div.querySelector('.secret-answer-a').textContent = item.answer;
         listEl.appendChild(div);
     });
@@ -426,7 +498,7 @@ async function openSecretAnswersModal() {
 }
 
 /* =========================================================================
-   QUIZ PLEIN ÉCRAN : « TU TE SOUVIENS DE NOTRE ÉTÉ ? »
+   QUIZ PLEIN ÉCRAN : SYSTÈME GÉNÉRIQUE POUR TOUS LES QUIZ / QCM
    ========================================================================= */
 function closeFullscreenQuiz() {
     fsQuizOverlay.classList.remove('active');
@@ -465,6 +537,9 @@ function launchFullscreenQuiz(item) {
 
     function renderCurrentQuestion() {
         const q = questions[currentIndex];
+        const qTitle = q.shortTitle || `Question ${currentIndex + 1}`;
+        const quizTitle = item.gameTitle || `Jour ${item.day}`;
+
         fsQuizStepLabel.textContent = `Question ${currentIndex + 1} / ${questions.length}`;
         fsQuizKicker.textContent = item.gameTitle || 'Tu te souviens de notre été ?';
         fsQuizQuestion.textContent = q.question;
@@ -485,7 +560,9 @@ function launchFullscreenQuiz(item) {
             textarea.className = 'quiz-textarea';
             textarea.placeholder = q.placeholder || 'Écris ta réponse ici...';
             if (saved && saved.answer) {
-                textarea.value = saved.answer;
+                textarea.value = Array.isArray(saved.history) && saved.history.length
+                    ? saved.history[saved.history.length - 1]
+                    : saved.answer;
             }
 
             const validateBtn = document.createElement('button');
@@ -503,7 +580,7 @@ function launchFullscreenQuiz(item) {
                     return;
                 }
 
-                saveAndSyncQuizAnswer(q.id, q.shortTitle || `Question ${currentIndex + 1}`, val);
+                saveAndSyncQuizAnswer(q.id, qTitle, val, quizTitle);
                 textarea.blur();
 
                 fsQuizFeedback.hidden = false;
@@ -526,6 +603,9 @@ function launchFullscreenQuiz(item) {
                 btn.textContent = opt.label;
 
                 btn.addEventListener('click', () => {
+                    // Enregistre chaque clic de Clara (son 1er choix + les suivants) dans le Carnet secret
+                    saveAndSyncQuizAnswer(q.id, qTitle, opt.label, quizTitle);
+
                     // On laisse les boutons cliquables même après avoir trouvé la bonne réponse
                     // pour que Clara puisse lire les phrases drôles des mauvaises réponses !
                     Array.from(fsQuizInteraction.querySelectorAll('.quiz-option-btn')).forEach((b) => {
@@ -590,7 +670,223 @@ function launchFullscreenQuiz(item) {
     renderCurrentQuestion();
 }
 
-/* Ouvre la modale du jour avec la petite box cliquable pour le jeu ou le quiz */
+/* =========================================================================
+   TICKETS / COUPONS À DÉCOUPER EN PLEIN ÉCRAN (JOURS 2 & 5)
+   ========================================================================= */
+let activeCouponCleanup = null;
+
+function closeFullscreenCoupon() {
+    if (activeCouponCleanup) {
+        activeCouponCleanup();
+        activeCouponCleanup = null;
+    }
+    if (fsCouponOverlay) {
+        fsCouponOverlay.classList.remove('active');
+        fsCouponOverlay.setAttribute('aria-hidden', 'true');
+    }
+}
+
+if (fsCouponCloseBtn) {
+    fsCouponCloseBtn.addEventListener('click', closeFullscreenCoupon);
+}
+if (couponDoneBtn) {
+    couponDoneBtn.addEventListener('click', closeFullscreenCoupon);
+}
+
+function spawnCouponSparkles() {
+    if (!couponSparkles) return;
+    couponSparkles.innerHTML = '';
+    const colors = ['#C59B5F', '#E8D5B5', '#9E2A2B', '#1E352B', '#F7D046'];
+
+    for (let i = 0; i < 28; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'coupon-sparkle-dot';
+        const angle = (Math.PI * 2 * i) / 28 + (Math.random() - 0.5) * 0.3;
+        const dist = 55 + Math.random() * 120;
+        const tx = Math.cos(angle) * dist;
+        const ty = Math.sin(angle) * dist - 20;
+        dot.style.left = `${45 + (Math.random() - 0.5) * 30}%`;
+        dot.style.top = '38%';
+        dot.style.backgroundColor = colors[i % colors.length];
+        dot.style.setProperty('--tx', `${tx.toFixed(1)}px`);
+        dot.style.setProperty('--ty', `${ty.toFixed(1)}px`);
+        couponSparkles.appendChild(dot);
+    }
+}
+
+function launchFullscreenCoupon(item) {
+    stopActiveGame();
+    if (activeCouponCleanup) {
+        activeCouponCleanup();
+        activeCouponCleanup = null;
+    }
+
+    fsCouponOverlay.classList.add('active');
+    fsCouponOverlay.setAttribute('aria-hidden', 'false');
+
+    // Configuration visuelle du ticket selon le jour
+    couponTicket.classList.remove('is-torn', 'theme-pine');
+    if (item.theme === 'pine') {
+        couponTicket.classList.add('theme-pine');
+    }
+
+    couponStub.style.transform = '';
+    couponStub.style.opacity = '';
+    couponSerialLeft.textContent = `N° 00${item.day}`;
+    couponSerialRight.textContent = `${item.day} DÉC.`;
+    couponBadge.textContent = item.couponBadge || 'BON CADEAU EXCLUSIF';
+    couponMainTitle.textContent = item.couponTitle || item.content;
+
+    if (item.couponClause) {
+        couponClause.hidden = false;
+        couponClause.textContent = item.couponClause;
+    } else {
+        couponClause.hidden = true;
+        couponClause.textContent = '';
+    }
+
+    couponStamp.textContent = item.couponStamp || 'VALABLE À VIE • POUR CLARA ❤️';
+    couponHint.hidden = false;
+    couponDoneBtn.hidden = true;
+
+    let cutProgress = 0; // 0 à 1
+    let isDragging = false;
+    let isTorn = false;
+
+    function updateCutVisuals(progress) {
+        cutProgress = Math.max(0, Math.min(1, progress));
+        const pct = cutProgress * 100;
+        couponCutLine.style.width = `${pct.toFixed(1)}%`;
+
+        // Déplace les ciseaux le long de la ligne pointillée (de 22px à largeur - 22px)
+        const rect = couponPerfZone.getBoundingClientRect();
+        const minX = 22;
+        const maxX = Math.max(minX + 10, rect.width - 22);
+        const handleX = minX + (maxX - minX) * cutProgress;
+        couponScissorsHandle.style.left = `${handleX.toFixed(1)}px`;
+
+        if (!isTorn) {
+            // Le talon supérieur se soulève et s'incline au fur et à mesure qu'on découpe
+            const liftY = -cutProgress * 12;
+            const tiltDeg = cutProgress * 4.5;
+            couponStub.style.transform = `translateY(${liftY.toFixed(1)}px) rotate(${tiltDeg.toFixed(2)}deg)`;
+        }
+    }
+
+    function completeTearOff() {
+        if (isTorn) return;
+        isTorn = true;
+        isDragging = false;
+        updateCutVisuals(1);
+
+        couponStub.style.transform = '';
+        couponTicket.classList.add('is-torn');
+        couponHint.hidden = true;
+        couponDoneBtn.hidden = false;
+        spawnCouponSparkles();
+
+        if (!gamesWon.includes(item.day)) {
+            gamesWon.push(item.day);
+            localStorage.setItem(GAMES_WON_KEY, JSON.stringify(gamesWon));
+        }
+
+        // Enregistre aussi dans le carnet secret que Clara a découpé son bon !
+        saveAndSyncQuizAnswer(
+            `coupon_jour_${item.day}`,
+            `Bon découpé (Jour ${item.day})`,
+            `Ticket découpé : « ${item.couponTitle} »`,
+            `Surprise Jour ${item.day}`
+        );
+
+        // Met à jour la modale du jour en arrière-plan
+        openModal(item);
+    }
+
+    function handlePointerX(clientX) {
+        if (isTorn) return;
+        const rect = couponPerfZone.getBoundingClientRect();
+        const pad = 22;
+        const usableW = Math.max(40, rect.width - pad * 2);
+        const rel = (clientX - (rect.left + pad)) / usableW;
+
+        // Empêche de sauter directement à 100% en cliquant tout à droite sans glisser
+        if (rel - cutProgress > 0.45) {
+            updateCutVisuals(cutProgress + 0.22);
+        } else if (rel > cutProgress) {
+            updateCutVisuals(rel);
+        }
+
+        if (cutProgress >= 0.86) {
+            completeTearOff();
+        }
+    }
+
+    const onTouchStart = (e) => {
+        if (isTorn) return;
+        isDragging = true;
+        if (e.touches && e.touches.length > 0) {
+            handlePointerX(e.touches[0].clientX);
+        }
+    };
+
+    const onTouchMove = (e) => {
+        if (!isDragging || isTorn) return;
+        if (e.touches && e.touches.length > 0) {
+            handlePointerX(e.touches[0].clientX);
+        }
+    };
+
+    const onTouchEnd = () => {
+        isDragging = false;
+    };
+
+    const onMouseDown = (e) => {
+        if (isTorn) return;
+        isDragging = true;
+        handlePointerX(e.clientX);
+    };
+
+    const onMouseMove = (e) => {
+        if (!isDragging || isTorn) return;
+        handlePointerX(e.clientX);
+    };
+
+    const onMouseUp = () => {
+        isDragging = false;
+    };
+
+    // Permet aussi de tapoter les ciseaux pour avancer cran par cran si besoin
+    const onScissorsClick = () => {
+        if (isTorn) return;
+        updateCutVisuals(cutProgress + 0.28);
+        if (cutProgress >= 0.86) {
+            completeTearOff();
+        }
+    };
+
+    couponPerfZone.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    couponPerfZone.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    couponScissorsHandle.addEventListener('click', onScissorsClick);
+
+    requestAnimationFrame(() => updateCutVisuals(0));
+
+    activeCouponCleanup = () => {
+        couponPerfZone.removeEventListener('touchstart', onTouchStart);
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onTouchEnd);
+        couponPerfZone.removeEventListener('mousedown', onMouseDown);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        couponScissorsHandle.removeEventListener('click', onScissorsClick);
+    };
+}
+
+/* Ouvre la modale du jour avec la petite box cliquable pour le jeu, le quiz ou le coupon */
 function openModal(item) {
     modalDay.textContent = `${item.day} Décembre`;
     modalBody.innerHTML = '';
@@ -654,6 +950,84 @@ function openModal(item) {
             launchFullscreenQuiz(item);
         });
         modalBody.appendChild(quizBox);
+    } else if (item.game === 'coupon') {
+        if (hasWon) {
+            const miniCard = document.createElement('div');
+            miniCard.className = 'coupon-mini-preview';
+            miniCard.innerHTML = `
+                <span class="coupon-mini-kicker">${item.couponBadge || 'BON CADEAU DÉCOUPÉ'}</span>
+                <div class="coupon-mini-title"></div>
+                ${item.couponClause ? '<div class="coupon-mini-clause"></div>' : ''}
+            `;
+            miniCard.querySelector('.coupon-mini-title').textContent = item.couponTitle;
+            if (item.couponClause) {
+                miniCard.querySelector('.coupon-mini-clause').textContent = item.couponClause;
+            }
+            modalBody.appendChild(miniCard);
+        }
+
+        const couponBox = document.createElement('div');
+        couponBox.className = 'coupon-launch-box';
+        if (item.theme === 'pine') {
+            couponBox.style.background = 'linear-gradient(145deg, #1E352B 0%, #15271F 100%)';
+            couponBox.style.boxShadow = '0 14px 30px -8px rgba(30, 53, 43, 0.28)';
+        }
+        couponBox.innerHTML = `
+            <div class="quiz-launch-content">
+                <span class="quiz-launch-tag">${item.gameSubtitle}</span>
+                <h3 class="quiz-launch-title">${item.gameTitle}</h3>
+                <div class="game-launch-cta">
+                    <span>${hasWon ? '✂️ Revoir / Redécouper mon ticket' : '✂️ Découper mon ticket cadeau'}</span>
+                </div>
+            </div>
+        `;
+        couponBox.addEventListener('click', () => {
+            launchFullscreenCoupon(item);
+        });
+        modalBody.appendChild(couponBox);
+    } else if (item.game === 'spotify_link') {
+        const noteLink = document.createElement('a');
+        noteLink.className = 'secret-music-note';
+        noteLink.href = item.spotifyWebUrl || 'https://open.spotify.com/track/5fdNHVZHbWB1AaXk4RBGVD';
+        noteLink.target = '_blank';
+        noteLink.rel = 'noopener noreferrer';
+        noteLink.innerHTML = `
+            <div class="secret-music-seal" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L14.3 9.2L21.5 11.5L14.3 13.8L12 21L9.7 13.8L2.5 11.5L9.7 9.2L12 2Z" fill="#E8D5B5"/>
+                </svg>
+            </div>
+            <span class="secret-music-kicker">${item.secretKicker || 'Petit mot secret'}</span>
+            <span class="secret-music-title">${item.secretLabel || 'Clique sur moi, surprise'}</span>
+        `;
+
+        noteLink.addEventListener('click', (e) => {
+            if (!gamesWon.includes(item.day)) {
+                gamesWon.push(item.day);
+                localStorage.setItem(GAMES_WON_KEY, JSON.stringify(gamesWon));
+            }
+
+            saveAndSyncQuizAnswer(
+                `spotify_jour_${item.day}`,
+                `Surprise musicale (Jour ${item.day})`,
+                `A cliqué sur « ${item.secretLabel || 'Clique sur moi, surprise'} » (Just the Two of Us)`,
+                `Surprise Jour ${item.day}`
+            );
+
+            // Sur téléphone (iPhone / Android), ouvre directement l'application Spotify sur la musique
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+            if (isMobile && item.spotifyUri) {
+                e.preventDefault();
+                window.location.href = item.spotifyUri;
+                setTimeout(() => {
+                    if (!document.hidden) {
+                        window.location.href = item.spotifyWebUrl;
+                    }
+                }, 650);
+            }
+        });
+
+        modalBody.appendChild(noteLink);
     } else {
         modalBody.innerHTML = `<div>${item.content}</div>`;
     }
@@ -2118,7 +2492,9 @@ modalOverlay.addEventListener('click', (e) => {
 
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        if (fsQuizOverlay && fsQuizOverlay.classList.contains('active')) {
+        if (fsCouponOverlay && fsCouponOverlay.classList.contains('active')) {
+            closeFullscreenCoupon();
+        } else if (fsQuizOverlay && fsQuizOverlay.classList.contains('active')) {
             closeFullscreenQuiz();
         } else if (fsOverlay.classList.contains('active')) {
             closeFullscreenGame();
@@ -2162,7 +2538,7 @@ function initHangingBaublesPhysics() {
             pivotX: 26,
             baseThreadY: 66,
             length: 85,
-            damping: 2.45,
+            damping: 2.7,
             eccentricity: 1.0,
             bounceScale: 1.0,
             phase: 0.2
@@ -2172,8 +2548,8 @@ function initHangingBaublesPhysics() {
             pivotX: 56,
             baseThreadY: 42,
             length: 51,
-            damping: 2.75,
-            eccentricity: -1.2,
+            damping: 3.0,
+            eccentricity: -1.15,
             bounceScale: 0.7,
             phase: 1.9
         },
@@ -2182,8 +2558,8 @@ function initHangingBaublesPhysics() {
             pivotX: 22,
             baseThreadY: 48,
             length: 61,
-            damping: 2.65,
-            eccentricity: 1.15,
+            damping: 2.9,
+            eccentricity: 1.1,
             bounceScale: 0.75,
             phase: 3.4
         },
@@ -2192,7 +2568,7 @@ function initHangingBaublesPhysics() {
             pivotX: 50,
             baseThreadY: 76,
             length: 94,
-            damping: 2.35,
+            damping: 2.6,
             eccentricity: -1.0,
             bounceScale: 1.0,
             phase: 4.8
@@ -2222,37 +2598,36 @@ function initHangingBaublesPhysics() {
 
     if (!pendulums.length) return;
 
-    const GRAVITY = 920;        // constante de gravité (px/s²)
-    const SPRING_K = 175;       // raideur élastique du fil doré
-    const SPRING_DAMP = 8.5;    // amortissement du rebond vertical
-    const MAX_ANGLE = 0.42;     // ~24° max (plus doux et réaliste)
-    const MAX_OMEGA = 4.6;      // vitesse angulaire max modérée
+    const GRAVITY = 900;        // constante de gravité (px/s²)
+    const SPRING_K = 180;       // raideur élastique du fil doré
+    const SPRING_DAMP = 9.5;    // amortissement du rebond vertical
+    const MAX_ANGLE = 0.29;     // ~16.5° max
+    const MAX_OMEGA = 3.2;      // vitesse angulaire max
 
     let lastScrollY = window.scrollY || window.pageYOffset || 0;
     let lastScrollEventTime = 0;
     let tiltTargetAngle = 0;    // inclinaison réelle du téléphone (si dispo)
 
-    // Applique une impulsion proportionnelle mais plus douce à la vitesse du mouvement
+    // Applique une impulsion proportionnelle mais mesurée à la vitesse du mouvement
     function applyWindowImpulse(dy, dx = 0) {
         const absDy = Math.abs(dy);
         const absDx = Math.abs(dx);
-        if (absDy < 0.4 && absDx < 0.4) return;
+        if (absDy < 0.5 && absDx < 0.5) return;
 
-        // Réponse progressive : très discret sur un petit scroll, plus marqué sur un grand geste
-        const nonLinearY = Math.sign(dy) * Math.min(60, Math.pow(absDy, 1.12));
+        const nonLinearY = Math.sign(dy) * Math.min(48, Math.pow(absDy, 1.08));
 
         pendulums.forEach((p) => {
-            const swingSign = Math.abs(p.omega) > 0.4
+            const swingSign = Math.abs(p.omega) > 0.35
                 ? Math.sign(p.omega) * Math.sign(dy || 1)
                 : Math.sign(dy || 1) * p.eccentricity;
 
-            // Impulsion angulaire adoucie
-            const angularKick = (nonLinearY * 0.016 * swingSign + dx * 0.011) * (75 / p.length);
+            // Impulsion angulaire légèrement réduite
+            const angularKick = (nonLinearY * 0.011 * swingSign + dx * 0.0075) * (75 / p.length);
             p.omega = Math.max(-MAX_OMEGA, Math.min(MAX_OMEGA, p.omega + angularKick));
 
-            // Impulsion verticale adoucie sur le fil doré
-            const verticalKick = -nonLinearY * 0.85 * p.bounceScale;
-            p.velY = Math.max(-95, Math.min(95, p.velY + verticalKick));
+            // Impulsion verticale légèrement réduite sur le fil doré
+            const verticalKick = -nonLinearY * 0.55 * p.bounceScale;
+            p.velY = Math.max(-65, Math.min(65, p.velY + verticalKick));
         });
     }
 
@@ -2263,7 +2638,7 @@ function initHangingBaublesPhysics() {
         lastScrollY = currentY;
         lastScrollEventTime = performance.now();
 
-        if (Math.abs(dy) > 0.4) {
+        if (Math.abs(dy) > 0.5) {
             applyWindowImpulse(dy, 0);
         }
     }, { passive: true });
@@ -2292,9 +2667,9 @@ function initHangingBaublesPhysics() {
         const scrolledRecently = (now - lastScrollEventTime) < 28;
 
         if (!scrolledRecently) {
-            applyWindowImpulse(fingerDy * 0.42, fingerDx * 0.28);
-        } else if (Math.abs(fingerDx) > 0.8) {
-            applyWindowImpulse(0, fingerDx * 0.22);
+            applyWindowImpulse(fingerDy * 0.30, fingerDx * 0.18);
+        } else if (Math.abs(fingerDx) > 0.9) {
+            applyWindowImpulse(0, fingerDx * 0.15);
         }
     }, { passive: true });
 
@@ -2307,15 +2682,15 @@ function initHangingBaublesPhysics() {
     window.addEventListener('wheel', (e) => {
         const now = performance.now();
         if ((now - lastScrollEventTime) > 28) {
-            applyWindowImpulse(e.deltaY * 0.18, e.deltaX * 0.12);
+            applyWindowImpulse(e.deltaY * 0.13, e.deltaX * 0.08);
         }
     }, { passive: true });
 
     // 4. Support gyroscope / inclinaison du téléphone (si disponible)
     window.addEventListener('deviceorientation', (e) => {
         if (typeof e.gamma === 'number') {
-            const clampedGamma = Math.max(-30, Math.min(30, e.gamma));
-            tiltTargetAngle = (clampedGamma * Math.PI) / 180 * 0.22;
+            const clampedGamma = Math.max(-25, Math.min(25, e.gamma));
+            tiltTargetAngle = (clampedGamma * Math.PI) / 180 * 0.16;
         }
     }, { passive: true });
 
@@ -2331,7 +2706,7 @@ function initHangingBaublesPhysics() {
             const p = pendulums[i];
 
             // Très léger souffle ambiant au repos
-            const ambientAngle = Math.sin(t * 1.05 + p.phase) * 0.01;
+            const ambientAngle = Math.sin(t * 0.95 + p.phase) * 0.007;
             const targetEq = tiltTargetAngle + ambientAngle;
 
             // Équation du pendule sous gravité : d²θ/dt² = -(g / L) * sin(θ - θ_eq) - damping * ω
@@ -2342,20 +2717,20 @@ function initHangingBaublesPhysics() {
             // Butées souples si l'angle dépasse la limite maximale
             if (p.angle > MAX_ANGLE) {
                 p.angle = MAX_ANGLE;
-                p.omega *= -0.4;
+                p.omega *= -0.35;
             } else if (p.angle < -MAX_ANGLE) {
                 p.angle = -MAX_ANGLE;
-                p.omega *= -0.4;
+                p.omega *= -0.35;
             }
 
             // Force centrifuge douce sur le fil
-            const centrifugalPull = Math.min(3, (p.omega * p.omega * p.length) * 0.008);
+            const centrifugalPull = Math.min(2, (p.omega * p.omega * p.length) * 0.006);
 
             // Ressort vertical (rebond sur le fil doré)
             const accY = -SPRING_K * (p.bounceY - centrifugalPull) - SPRING_DAMP * p.velY;
             p.velY += accY * dt;
             p.bounceY += p.velY * dt;
-            p.bounceY = Math.max(-4.5, Math.min(6.5, p.bounceY));
+            p.bounceY = Math.max(-3.2, Math.min(4.5, p.bounceY));
 
             const deg = (p.angle * 180) / Math.PI;
             p.groupEl.style.transform = `rotate(${deg.toFixed(2)}deg)`;

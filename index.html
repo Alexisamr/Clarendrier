@@ -13,10 +13,10 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#FAF7F2">
 
-    <title>Calendrier de l'Avent — Pour ma Clara</title>
-    <meta name="description" content="Un calendrier de l'Avent interactif et personnalisé pour Clara.">
-    <meta property="og:title" content="Calendrier de l'Avent — Pour ma Clara">
-    <meta property="og:description" content="Un calendrier de l'Avent interactif et personnalisé pour Clara.">
+    <title>Calendrier de l'Avent</title>
+    <meta name="description" content="Calendrier de l'Avent interactif.">
+    <meta property="og:title" content="Calendrier de l'Avent">
+    <meta property="og:description" content="Calendrier de l'Avent interactif.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -109,7 +109,7 @@
                 </svg>
             </div>
 
-            <span class="gate-kicker">Accès Privé • Clara</span>
+            <span class="gate-kicker">Accès Privé</span>
             <h1 class="gate-question" id="gate-question">Quelle est ma couleur préférée ?</h1>
 
             <form class="gate-form" id="gate-form" autocomplete="off">
@@ -322,7 +322,7 @@
                 <div class="coupon-stub" id="coupon-stub">
                     <div class="coupon-stub-meta">
                         <span id="coupon-serial-left">N° 002</span>
-                        <span>ÉDITION PRIVÉE • CLARA</span>
+                        <span>ÉDITION PRIVÉE</span>
                         <span id="coupon-serial-right">DÉC.</span>
                     </div>
                     <div class="coupon-stub-title">TALON À DÉTACHER</div>
@@ -354,12 +354,11 @@
                 <div class="coupon-body" id="coupon-body">
                     <!-- Voile scellé tant que le ticket n'est pas découpé -->
                     <div class="coupon-mystery-veil" id="coupon-mystery-veil">
-                        <div class="coupon-wax-seal">
+                        <div class="coupon-wax-seal" style="margin-bottom: 0;">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                                 <path d="M12 2L14.4 9.2L22 12L14.4 14.8L12 22L9.6 14.8L2 12L9.6 9.2L12 2Z" fill="#E8D5B5"/>
                             </svg>
                         </div>
-                        <p class="coupon-veil-text">Glisse les ciseaux sur les pointillés pour découper et révéler ton bon</p>
                     </div>
 
                     <!-- Contenu révélé du Bon -->
@@ -382,7 +381,7 @@
                         <p class="coupon-clause" id="coupon-clause" hidden></p>
 
                         <div class="coupon-footer-row">
-                            <div class="coupon-stamp" id="coupon-stamp">VALABLE À VIE • POUR CLARA ❤️</div>
+                            <div class="coupon-stamp" id="coupon-stamp">VALABLE À VIE ❤️</div>
                             <div class="coupon-barcode" aria-hidden="true">
                                 <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
                             </div>
@@ -391,9 +390,51 @@
                 </div>
             </div>
 
-            <p class="coupon-hint" id="coupon-hint">✂️ Glisse les ciseaux vers la droite pour découper le ticket</p>
             <button type="button" class="btn-sober coupon-done-btn" id="coupon-done-btn" hidden>
                 Garder précieusement ce bon ❤️
+            </button>
+        </div>
+    </div>
+
+    <!-- Conteneur Plein Écran pour la Carte à Gratter Virtuelle (Jour 6) -->
+    <div class="fs-scratch-overlay" id="fs-scratch-overlay" aria-hidden="true">
+        <div class="fs-quiz-topbar">
+            <div class="fs-quiz-progress">
+                <span class="fs-quiz-step-label" id="fs-scratch-top-label">Carte à Gratter • 0%</span>
+            </div>
+            <button class="fs-quiz-close-btn" id="fs-scratch-close-btn" aria-label="Fermer">&times;</button>
+        </div>
+
+        <div class="fs-scratch-stage">
+            <div class="scratch-card-tabs" id="scratch-card-tabs" hidden></div>
+
+            <div class="scratch-ticket-card" id="scratch-ticket-card">
+                <div class="scratch-ticket-header">
+                    <span class="scratch-serial" id="scratch-serial">N° 006 • ÉDITION D'OR</span>
+                    <span class="scratch-header-title" id="scratch-header-title">TICKET À GRATTER</span>
+                </div>
+
+                <div class="scratch-viewport" id="scratch-viewport">
+                    <img
+                        src="/assets/image1.png"
+                        alt="Surprise cachée sous la carte à gratter"
+                        class="scratch-under-img"
+                        id="scratch-under-img"
+                        draggable="false"
+                    />
+                    <canvas id="scratch-foil-canvas" class="scratch-foil-canvas"></canvas>
+                    <canvas id="scratch-fx-canvas" class="scratch-fx-canvas"></canvas>
+                </div>
+
+                <div class="scratch-photo-caption" id="scratch-photo-caption" hidden></div>
+
+                <div class="scratch-ticket-footer">
+                    <span class="scratch-footer-text" id="scratch-footer-text">Gratte la pellicule dorée avec ton doigt</span>
+                </div>
+            </div>
+
+            <button type="button" class="btn-sober scratch-done-btn" id="scratch-done-btn" hidden>
+                Garder ce souvenir ❤️
             </button>
         </div>
     </div>

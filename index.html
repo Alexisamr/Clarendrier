@@ -11,36 +11,74 @@
     <link rel="apple-touch-icon" href="assets/icon.png">
     
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#FAF8F5">
+    <meta name="theme-color" content="#FAF7F2">
 
-    <title>Calendrier de l'Avent</title>
+    <title>Calendrier de l'Avent — En attendant Noël</title>
+    <meta name="description" content="Un calendrier de l'Avent interactif et élégant avec surprises quotidiennes et mini-jeu d'ascension de la dune au Cap Ferret.">
+    <meta property="og:title" content="Calendrier de l'Avent — En attendant Noël">
+    <meta property="og:description" content="Un calendrier de l'Avent interactif et élégant avec surprises quotidiennes et mini-jeu d'ascension de la dune au Cap Ferret.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+    <!-- Ambient subtle background glow -->
+    <div class="ambient-bg" aria-hidden="true">
+        <div class="ambient-orb ambient-orb-1"></div>
+        <div class="ambient-orb ambient-orb-2"></div>
+    </div>
 
     <main class="app-container">
         <header class="header">
-            <span class="subtitle">Décembre</span>
+            <div class="header-ornament" aria-hidden="true">
+                <span class="ornament-line"></span>
+                <svg class="ornament-star" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8L12 2Z" fill="currentColor"/>
+                </svg>
+                <span class="ornament-line"></span>
+            </div>
+            <span class="subtitle">Édition Décembre</span>
             <h1 class="title">En attendant Noël</h1>
-            <p class="progress-text" id="progress-text">0 sur 24 découverts</p>
+            <p class="header-tagline">Vingt-quatre instants précieux à dévoiler jour après jour</p>
+
+            <div class="progress-wrapper">
+                <div class="progress-meta">
+                    <span class="progress-label">Progression</span>
+                    <span class="progress-text" id="progress-text">0 sur 24 découverts</span>
+                </div>
+                <div class="header-progress-track">
+                    <div class="header-progress-fill" id="header-progress-fill"></div>
+                </div>
+            </div>
         </header>
 
-        <section class="calendar-grid" id="calendar-grid"></section>
+        <section class="calendar-grid" id="calendar-grid" aria-label="Jours du calendrier de l'Avent"></section>
+
+        <footer class="app-footer">
+            <span>Créé avec soin • Joyeuses Fêtes</span>
+        </footer>
     </main>
 
     <!-- Tiroir Modal (Bottom Sheet) -->
     <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
-        <div class="modal-sheet">
+        <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div class="modal-handle"></div>
             <button class="modal-close" id="modal-close" aria-label="Fermer">&times;</button>
             <div class="modal-content">
-                <span class="modal-day" id="modal-day">Jour 1</span>
+                <div class="modal-day-header">
+                    <span class="modal-day" id="modal-day">1 Décembre</span>
+                </div>
                 <h2 class="modal-title" id="modal-title">Titre du jour</h2>
+                <div class="modal-divider" aria-hidden="true">
+                    <span></span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8L12 2Z" fill="currentColor"/>
+                    </svg>
+                    <span></span>
+                </div>
                 <div class="modal-body" id="modal-body"></div>
             </div>
         </div>
@@ -69,7 +107,7 @@
         </div>
 
         <!-- Indication en bas de l'écran -->
-        <div class="fs-hint" id="fs-hint">Glisse ton doigt pour éviter les pièges</div>
+        <div class="fs-hint" id="fs-hint">Glisse ton doigt ou utilise ◀ ▶ pour éviter les pièges</div>
 
         <!-- Écran de fin (Victoire / Nuit tombée) par-dessus le jeu -->
         <div class="fs-end-card" id="fs-end-card">
@@ -82,6 +120,6 @@
 
     <div class="toast" id="toast">Patience...</div>
 
-    <script src="script.js"></script>
+    <script type="module" src="/script.js"></script>
 </body>
 </html>

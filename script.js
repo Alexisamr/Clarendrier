@@ -42,6 +42,7 @@ let activeGameCleanup = null;
 
 const gridEl = document.getElementById('calendar-grid');
 const progressTextEl = document.getElementById('progress-text');
+const progressFillEl = document.getElementById('header-progress-fill');
 const modalOverlay = document.getElementById('modal-overlay');
 const modalClose = document.getElementById('modal-close');
 const modalDay = document.getElementById('modal-day');
@@ -73,6 +74,10 @@ function isDayUnlocked(dayNumber) {
 function updateProgress() {
     const count = openedDays.length;
     progressTextEl.textContent = `${count} sur 24 ${count > 1 ? 'découverts' : 'découvert'}`;
+    if (progressFillEl) {
+        const pct = Math.min(100, Math.round((count / 24) * 100));
+        progressFillEl.style.width = `${pct}%`;
+    }
 }
 
 function showToast(message) {
@@ -229,12 +234,22 @@ function launchFullscreenFerretGame(item) {
         if (e.touches.length > 0) updateTargetFromX(e.touches[0].clientX);
     };
     const onMouseMove = (e) => {
-        if (e.buttons === 1) updateTargetFromX(e.clientX);
+        updateTargetFromX(e.clientX);
+    };
+    const onKeyDown = (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'q') {
+            fsHint.style.opacity = '0';
+            player.targetLanePos = Math.max(-0.85, player.targetLanePos - 0.32);
+        } else if (e.key === 'ArrowRight' || e.key === 'd') {
+            fsHint.style.opacity = '0';
+            player.targetLanePos = Math.min(0.85, player.targetLanePos + 0.32);
+        }
     };
 
     canvas.addEventListener('touchstart', onTouchStart, { passive: true });
     canvas.addEventListener('touchmove', onTouchMove, { passive: false });
     canvas.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('keydown', onKeyDown);
     window.addEventListener('resize', resizeCanvas);
 
     function spawnObstacle() {
@@ -827,6 +842,7 @@ function launchFullscreenFerretGame(item) {
         canvas.removeEventListener('touchstart', onTouchStart);
         canvas.removeEventListener('touchmove', onTouchMove);
         canvas.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('keydown', onKeyDown);
         window.removeEventListener('resize', resizeCanvas);
     };
 }
@@ -850,10 +866,25 @@ function renderGrid() {
             card.classList.add('locked');
         }
 
-        card.innerHTML = `
-            <span class="day-number">${item.day}</span>
-            <span class="day-dot"></span>
-        `;
+        if (item.day === 24) {
+            card.innerHTML = `
+                <span class="day-kicker">Veille de Noël</span>
+                <span class="day-number">${item.day}</span>
+                <span class="day-subtitle-24">La grande surprise du réveillon</span>
+                <div class="day-status-row">
+                    <span class="day-dot"></span>
+                </div>
+            `;
+        } else {
+            const gameBadge = item.game ? '<span class="day-badge-icon" title="Mini-jeu">☀️</span>' : '';
+            card.innerHTML = `
+                <span class="day-kicker">Déc</span>
+                <span class="day-number">${item.day}</span>
+                <div class="day-status-row">
+                    ${gameBadge || '<span class="day-dot"></span>'}
+                </div>
+            `;
+        }
 
         card.addEventListener('click', () => {
             if (!unlocked) {
@@ -881,6 +912,16 @@ function renderGrid() {
 modalClose.addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', (e) => {
     if (e.target === modalOverlay) closeModal();
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (fsOverlay.classList.contains('active')) {
+            closeFullscreenGame();
+        } else if (modalOverlay.classList.contains('active')) {
+            closeModal();
+        }
+    }
 });
 
 renderGrid();

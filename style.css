@@ -12,7 +12,9 @@
     --accent-soft: #2C4A3E;
     --gold-accent: #C59B5F;
     --gold-light: #E8D5B5;
-    --terracotta: #C86D55;
+    --christmas-red: #9E2A2B;
+    --christmas-red-soft: rgba(158, 42, 43, 0.14);
+    --terracotta: #9E2A2B;
     
     --font-serif: 'Cormorant Garamond', Georgia, serif;
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -63,7 +65,7 @@ body {
     top: -120px;
     left: 50%;
     transform: translateX(-60%);
-    background: radial-gradient(circle, rgba(232, 213, 181, 0.7) 0%, rgba(250, 247, 242, 0) 70%);
+    background: radial-gradient(circle, rgba(232, 213, 181, 0.75) 0%, rgba(250, 247, 242, 0) 70%);
 }
 
 .ambient-orb-2 {
@@ -74,6 +76,55 @@ body {
     background: radial-gradient(circle, rgba(30, 53, 43, 0.08) 0%, rgba(250, 247, 242, 0) 70%);
 }
 
+.ambient-orb-3 {
+    width: 300px;
+    height: 300px;
+    top: 30%;
+    left: -120px;
+    background: radial-gradient(circle, rgba(158, 42, 43, 0.06) 0%, rgba(250, 247, 242, 0) 70%);
+}
+
+/* --- BOULES DE NOËL SUSPENDUES EN HAUT DE L'ÉCRAN --- */
+.hanging-deco-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 650;
+    max-width: 780px;
+    margin: 0 auto;
+}
+
+.hanging-bauble {
+    position: absolute;
+    top: 0;
+    transform-origin: top center;
+}
+
+.hanging-left {
+    left: 10px;
+    animation: baubleSway 5.5s ease-in-out infinite alternate;
+}
+
+.hanging-right {
+    right: 10px;
+    animation: baubleSway 6.2s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes baubleSway {
+    0% { transform: rotate(-2.2deg); }
+    100% { transform: rotate(2.2deg); }
+}
+
+@media (max-width: 420px) {
+    .hanging-bauble {
+        transform: scale(0.82);
+    }
+    .hanging-left { left: 2px; }
+    .hanging-right { right: 2px; }
+}
+
 /* --- ÉCRAN D'ACCÈS (QUESTION SECRÈTE) --- */
 .gate-overlay {
     position: fixed;
@@ -82,7 +133,7 @@ body {
     background-color: var(--bg-color);
     background-image:
         radial-gradient(circle at 50% 15%, rgba(232, 213, 181, 0.38) 0%, transparent 55%),
-        radial-gradient(circle at 80% 85%, rgba(30, 53, 43, 0.06) 0%, transparent 50%);
+        radial-gradient(circle at 80% 85%, rgba(158, 42, 43, 0.05) 0%, transparent 50%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -103,7 +154,7 @@ body {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 24px;
-    padding: 36px 28px 32px;
+    padding: 26px 28px 26px;
     text-align: center;
     box-shadow: 0 20px 50px -12px rgba(26, 33, 30, 0.10);
     position: relative;
@@ -115,8 +166,33 @@ body {
     position: absolute;
     inset: 6px;
     border-radius: 18px;
-    border: 1px solid rgba(197, 155, 95, 0.16);
+    border: 1px solid rgba(197, 155, 95, 0.22);
     pointer-events: none;
+}
+
+/* Coins festifs subtils sur la carte d'accueil */
+.gate-card::after {
+    content: '✦';
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 0.7rem;
+    color: var(--gold-accent);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.gate-festive-top {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 6px;
+}
+
+.gate-festive-bottom {
+    display: flex;
+    justify-content: center;
+    margin-top: 18px;
+    opacity: 0.92;
 }
 
 .gate-overlay.unlocked .gate-card {
@@ -139,7 +215,7 @@ body {
     font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.22em;
-    color: var(--gold-accent);
+    color: var(--christmas-red);
     font-weight: 600;
     margin-bottom: 10px;
 }
@@ -150,7 +226,7 @@ body {
     font-weight: 600;
     line-height: 1.2;
     color: var(--text-primary);
-    margin-bottom: 24px;
+    margin-bottom: 22px;
     text-wrap: balance;
 }
 
@@ -195,7 +271,7 @@ body {
 .gate-error {
     min-height: 18px;
     font-size: 0.78rem;
-    color: var(--terracotta);
+    color: var(--christmas-red);
     font-weight: 500;
     margin: -2px 0;
 }
@@ -210,7 +286,7 @@ body {
     z-index: 1;
     max-width: 520px;
     margin: 0 auto;
-    padding-top: calc(env(safe-area-inset-top, 20px) + 20px);
+    padding-top: calc(env(safe-area-inset-top, 20px) + 18px);
     padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 44px);
     padding-left: 20px;
     padding-right: 20px;
@@ -219,7 +295,7 @@ body {
 @media (min-width: 768px) {
     .app-container {
         max-width: 680px;
-        padding-top: 40px;
+        padding-top: 36px;
         padding-bottom: 64px;
         padding-left: 32px;
         padding-right: 32px;
@@ -229,31 +305,13 @@ body {
 /* --- HEADER --- */
 .header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
-.header-ornament {
+.header-christmas-crest {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 8px;
-    color: var(--gold-accent);
-}
-
-.ornament-line {
-    width: 36px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--gold-accent), transparent);
-}
-
-.ornament-star {
-    animation: gentlePulse 4s ease-in-out infinite;
-}
-
-@keyframes gentlePulse {
-    0%, 100% { transform: scale(1); opacity: 0.85; }
-    50% { transform: scale(1.15); opacity: 1; }
 }
 
 /* --- CALENDAR GRID --- */
@@ -295,7 +353,7 @@ body {
     position: absolute;
     inset: 5px;
     border-radius: 13px;
-    border: 1px solid rgba(197, 155, 95, 0.14);
+    border: 1px solid rgba(197, 155, 95, 0.16);
     pointer-events: none;
     transition: border-color 0.25s ease;
 }
@@ -309,6 +367,16 @@ body {
 
 .day-card:active {
     transform: scale(0.96);
+}
+
+/* Petits détails festifs dans le coin supérieur droit de certaines cartes */
+.card-corner-deco {
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    pointer-events: none;
+    opacity: 0.78;
+    line-height: 1;
 }
 
 .day-kicker {
@@ -333,9 +401,10 @@ body {
 .day-status-row {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 5px;
-    margin-top: 8px;
-    min-height: 14px;
+    margin-top: 7px;
+    min-height: 16px;
 }
 
 .day-dot {
@@ -346,15 +415,14 @@ body {
     transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
-.day-badge-icon {
-    font-size: 0.72rem;
-    line-height: 1;
-    opacity: 0.85;
+.day-deco-svg {
+    display: block;
+    transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
 /* State: Available to open */
 .day-card.available {
-    border-color: rgba(30, 53, 43, 0.35);
+    border-color: rgba(197, 155, 95, 0.45);
     background: linear-gradient(165deg, #FFFFFF 0%, #FCF9F4 100%);
 }
 
@@ -363,8 +431,8 @@ body {
 }
 
 .day-card.available .day-dot {
-    background-color: var(--gold-accent);
-    box-shadow: 0 0 8px rgba(197, 155, 95, 0.5);
+    background-color: var(--christmas-red);
+    box-shadow: 0 0 6px rgba(158, 42, 43, 0.35);
 }
 
 /* State: Already opened */
@@ -382,6 +450,10 @@ body {
     color: var(--text-secondary);
 }
 
+.day-card.opened .day-deco-svg {
+    opacity: 0.45;
+}
+
 .day-card.opened .day-dot {
     background-color: var(--accent-color);
     opacity: 0.45;
@@ -397,7 +469,7 @@ body {
 .day-card.day-24 {
     grid-column: span 3;
     aspect-ratio: 3 / 1;
-    background: linear-gradient(135deg, #1E352B 0%, #29463A 55%, #1A2E25 100%);
+    background: linear-gradient(135deg, #1E352B 0%, #274437 52%, #192D24 100%);
     border-color: var(--gold-accent);
     color: #FAF7F2;
     box-shadow: 0 12px 30px -8px rgba(30, 53, 43, 0.35);
@@ -411,7 +483,7 @@ body {
 }
 
 .day-card.day-24::before {
-    border-color: rgba(197, 155, 95, 0.45);
+    border-color: rgba(197, 155, 95, 0.48);
 }
 
 .day-card.day-24 .day-kicker {
@@ -426,23 +498,46 @@ body {
     font-size: 2.5rem;
 }
 
+.day-24-flank {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    opacity: 0.9;
+}
+
+.day-24-flank.left {
+    left: 22px;
+}
+
+.day-24-flank.right {
+    right: 22px;
+}
+
 .day-card.day-24.opened {
     background: linear-gradient(135deg, #263E34 0%, #1E352B 100%);
 }
 
-.day-card.day-24 .day-dot {
-    background-color: var(--gold-accent);
-}
-
 /* Footer */
 .app-footer {
-    margin-top: 34px;
+    margin-top: 32px;
     text-align: center;
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 1.08rem;
+    font-size: 1.12rem;
     letter-spacing: 0.04em;
     color: var(--text-secondary);
+}
+
+.footer-christmas-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.footer-deco-icon {
+    opacity: 0.9;
 }
 
 /* --- TIROIR MODAL (Bottom Sheet / Dialog) --- */
@@ -458,7 +553,7 @@ body {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease;
-    z-index: 100;
+    z-index: 700;
 }
 
 @media (min-width: 640px) {
@@ -545,13 +640,13 @@ body {
 
 .modal-day-header {
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .modal-day {
     display: inline-block;
     font-family: var(--font-serif);
-    font-size: 1.65rem;
+    font-size: 1.7rem;
     font-weight: 600;
     color: var(--text-primary);
 }
@@ -563,13 +658,13 @@ body {
     gap: 10px;
     margin-bottom: 18px;
     color: var(--gold-accent);
-    opacity: 0.75;
 }
 
 .modal-divider span {
-    width: 44px;
+    width: 52px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    background: linear-gradient(90deg, transparent, var(--gold-accent), transparent);
+    opacity: 0.65;
 }
 
 .modal-body {
@@ -666,7 +761,7 @@ body {
     width: 100vw;
     height: 100dvh;
     background-color: #1C1B19;
-    z-index: 500;
+    z-index: 800;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
@@ -889,7 +984,7 @@ body {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s ease, transform 0.25s ease;
-    z-index: 200;
+    z-index: 750;
     white-space: nowrap;
 }
 

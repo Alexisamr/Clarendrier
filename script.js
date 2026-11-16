@@ -5,12 +5,15 @@ const DEV_MODE = true;
 
 const STORAGE_KEY = 'advent_opened_days_v1';
 const GAMES_WON_KEY = 'advent_games_won_v1';
+const GATE_AUTH_KEY = 'advent_gate_auth_v1';
 
 /* =========================================================================
-   CONFIGURATION DE LA QUESTION D'ACCÈS (ROTATION AUTOMATIQUE)
+   CONFIGURATION DE LA QUESTION D'ACCÈS (ROTATION & MÉMORISATION)
+   - GATE_REMEMBER_HOURS : durée (en heures) pendant laquelle l'appareil est mémorisé (24h = 1 jour)
    - QUESTION_ROTATION_HOURS : durée (en heures) avant de passer à la question suivante
    - GATE_QUESTIONS : liste des questions et réponses acceptées (insensible aux majuscules/accents)
    ========================================================================= */
+const GATE_REMEMBER_HOURS = 24;
 const QUESTION_ROTATION_HOURS = 24;
 
 const GATE_QUESTIONS = [
@@ -109,8 +112,30 @@ function getActiveGateQuestion() {
     return GATE_QUESTIONS[index];
 }
 
+function isGateSessionValid() {
+    try {
+        const raw = localStorage.getItem(GATE_AUTH_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!data || typeof data.unlockedAt !== 'number') return false;
+        const rememberMs = Math.max(1, GATE_REMEMBER_HOURS) * 3600 * 1000;
+        return (Date.now() - data.unlockedAt) < rememberMs;
+    } catch {
+        return false;
+    }
+}
+
 function initGate() {
     if (!gateOverlay || !gateForm) return;
+
+    // Si l'appareil a déjà répondu correctement dans les dernières 24h, on déverrouille directement
+    if (isGateSessionValid()) {
+        gateOverlay.style.transition = 'none';
+        gateOverlay.classList.add('unlocked');
+        gateOverlay.setAttribute('aria-hidden', 'true');
+        return;
+    }
+
     const activeQ = getActiveGateQuestion();
     gateQuestionEl.textContent = activeQ.question;
 
@@ -120,8 +145,12 @@ function initGate() {
         const isValid = activeQ.answers.some((ans) => normalizeAnswer(ans) === userVal);
 
         if (isValid) {
+            localStorage.setItem(GATE_AUTH_KEY, JSON.stringify({
+                unlockedAt: Date.now()
+            }));
             gateError.textContent = '';
             gateInput.blur();
+            gateOverlay.style.transition = '';
             gateOverlay.classList.add('unlocked');
             gateOverlay.setAttribute('aria-hidden', 'true');
         } else {
@@ -906,6 +935,64 @@ function launchFullscreenFerretGame(item) {
     };
 }
 
+function getCardHolidayMotif(day, item) {
+    if (item.game) {
+        // Soleil doré / Cap Ferret
+        return `
+            <svg class="day-deco-svg" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <circle cx="8" cy="8" r="4" fill="#C59B5F"/>
+                <circle cx="8" cy="8" r="6.2" stroke="#C59B5F" stroke-width="1" stroke-dasharray="2 2"/>
+            </svg>
+        `;
+    }
+
+    const mod = day % 5;
+    if (mod === 1) {
+        // Petite boule de Noël rouge velours et attache dorée
+        return `
+            <svg class="day-deco-svg" width="13" height="15" viewBox="0 0 14 16" fill="none" aria-hidden="true">
+                <rect x="5.2" y="1" width="3.6" height="2" rx="0.6" fill="#C59B5F"/>
+                <circle cx="7" cy="9" r="5.2" fill="#9E2A2B" stroke="#C59B5F" stroke-width="0.8"/>
+                <circle cx="5.4" cy="7.3" r="1" fill="#FAF7F2" opacity="0.45"/>
+            </svg>
+        `;
+    }
+    if (mod === 2) {
+        // Petit sapin vert pin avec étoile dorée
+        return `
+            <svg class="day-deco-svg" width="14" height="15" viewBox="0 0 14 15" fill="none" aria-hidden="true">
+                <path d="M7 1.8L3 7.2H5.3L2 11.8H12L8.7 7.2H11L7 1.8Z" fill="#1E352B"/>
+                <rect x="6.1" y="11.8" width="1.8" height="2.2" fill="#8C5A3C"/>
+                <circle cx="7" cy="1.5" r="1.1" fill="#C59B5F"/>
+                <circle cx="6.2" cy="9.2" r="0.9" fill="#9E2A2B"/>
+            </svg>
+        `;
+    }
+    if (mod === 3) {
+        // Étoile dorée de Noël
+        return `
+            <svg class="day-deco-svg" width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M7 1L8.4 5.6L13 7L8.4 8.4L7 13L5.6 8.4L1 7L5.6 5.6L7 1Z" fill="#C59B5F"/>
+            </svg>
+        `;
+    }
+    if (mod === 0) {
+        // Houx & baies rouges
+        return `
+            <svg class="day-deco-svg" width="15" height="13" viewBox="0 0 16 14" fill="none" aria-hidden="true">
+                <path d="M7.5 8C4.5 4.5 1.5 6 3 9.5C4.5 11 6.5 10 7.5 8Z" fill="#1E352B"/>
+                <path d="M8.5 8C11.5 4.5 14.5 6 13 9.5C11.5 11 9.5 10 8.5 8Z" fill="#1E352B"/>
+                <circle cx="8" cy="6.2" r="1.8" fill="#9E2A2B"/>
+                <circle cx="6.7" cy="8.2" r="1.6" fill="#B83B3B"/>
+                <circle cx="9.3" cy="8.2" r="1.6" fill="#9E2A2B"/>
+            </svg>
+        `;
+    }
+
+    // Point classique rouge/doré
+    return `<span class="day-dot"></span>`;
+}
+
 function renderGrid() {
     gridEl.innerHTML = '';
 
@@ -927,19 +1014,36 @@ function renderGrid() {
 
         if (item.day === 24) {
             card.innerHTML = `
+                <svg class="day-24-flank left" width="32" height="38" viewBox="0 0 32 38" fill="none" aria-hidden="true">
+                    <path d="M16 4L7 16H12L4 28H13.5V34H18.5V28H28L20 16H25L16 4Z" fill="#2C4A3E" stroke="#C59B5F" stroke-width="0.9"/>
+                    <circle cx="16" cy="3.5" r="2" fill="#E8D5B5"/>
+                    <circle cx="13" cy="19" r="1.8" fill="#9E2A2B"/>
+                    <circle cx="19" cy="23" r="1.8" fill="#C59B5F"/>
+                    <circle cx="12" cy="25" r="1.5" fill="#E8D5B5"/>
+                </svg>
                 <span class="day-kicker">Veille de Noël</span>
                 <span class="day-number">${item.day}</span>
                 <div class="day-status-row">
-                    <span class="day-dot"></span>
+                    <svg class="day-deco-svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <rect x="6" y="1" width="4" height="2.2" rx="0.7" fill="#C59B5F"/>
+                        <circle cx="8" cy="9.2" r="5.5" fill="#9E2A2B" stroke="#E8D5B5" stroke-width="0.9"/>
+                        <path d="M8 6L8.8 8.4L11.2 9.2L8.8 10L8 12.4L7.2 10L4.8 9.2L7.2 8.4L8 6Z" fill="#E8D5B5"/>
+                    </svg>
                 </div>
+                <svg class="day-24-flank right" width="32" height="38" viewBox="0 0 32 38" fill="none" aria-hidden="true">
+                    <path d="M16 4L7 16H12L4 28H13.5V34H18.5V28H28L20 16H25L16 4Z" fill="#2C4A3E" stroke="#C59B5F" stroke-width="0.9"/>
+                    <circle cx="16" cy="3.5" r="2" fill="#E8D5B5"/>
+                    <circle cx="19" cy="18" r="1.8" fill="#9E2A2B"/>
+                    <circle cx="13" cy="23" r="1.8" fill="#C59B5F"/>
+                    <circle cx="20" cy="25" r="1.5" fill="#9E2A2B"/>
+                </svg>
             `;
         } else {
-            const gameBadge = item.game ? '<span class="day-badge-icon" title="Mini-jeu">☀️</span>' : '';
             card.innerHTML = `
                 <span class="day-kicker">Déc</span>
                 <span class="day-number">${item.day}</span>
                 <div class="day-status-row">
-                    ${gameBadge || '<span class="day-dot"></span>'}
+                    ${getCardHolidayMotif(item.day, item)}
                 </div>
             `;
         }

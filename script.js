@@ -1705,7 +1705,7 @@ function initHangingBaublesPhysics() {
             pivotX: 26,
             baseThreadY: 66,
             length: 85,
-            damping: 1.85,
+            damping: 2.45,
             eccentricity: 1.0,
             bounceScale: 1.0,
             phase: 0.2
@@ -1715,9 +1715,9 @@ function initHangingBaublesPhysics() {
             pivotX: 56,
             baseThreadY: 42,
             length: 51,
-            damping: 2.15,
-            eccentricity: -1.35,
-            bounceScale: 0.75,
+            damping: 2.75,
+            eccentricity: -1.2,
+            bounceScale: 0.7,
             phase: 1.9
         },
         {
@@ -1725,9 +1725,9 @@ function initHangingBaublesPhysics() {
             pivotX: 22,
             baseThreadY: 48,
             length: 61,
-            damping: 2.05,
-            eccentricity: 1.3,
-            bounceScale: 0.82,
+            damping: 2.65,
+            eccentricity: 1.15,
+            bounceScale: 0.75,
             phase: 3.4
         },
         {
@@ -1735,9 +1735,9 @@ function initHangingBaublesPhysics() {
             pivotX: 50,
             baseThreadY: 76,
             length: 94,
-            damping: 1.75,
-            eccentricity: -1.05,
-            bounceScale: 1.08,
+            damping: 2.35,
+            eccentricity: -1.0,
+            bounceScale: 1.0,
             phase: 4.8
         }
     ];
@@ -1765,38 +1765,37 @@ function initHangingBaublesPhysics() {
 
     if (!pendulums.length) return;
 
-    const GRAVITY = 960;        // constante de gravité (px/s²)
-    const SPRING_K = 165;       // raideur élastique du fil doré
-    const SPRING_DAMP = 6.2;    // amortissement du rebond vertical
-    const MAX_ANGLE = 0.76;     // ~43.5° max
-    const MAX_OMEGA = 9.5;      // vitesse angulaire max
+    const GRAVITY = 920;        // constante de gravité (px/s²)
+    const SPRING_K = 175;       // raideur élastique du fil doré
+    const SPRING_DAMP = 8.5;    // amortissement du rebond vertical
+    const MAX_ANGLE = 0.42;     // ~24° max (plus doux et réaliste)
+    const MAX_OMEGA = 4.6;      // vitesse angulaire max modérée
 
     let lastScrollY = window.scrollY || window.pageYOffset || 0;
     let lastScrollEventTime = 0;
     let tiltTargetAngle = 0;    // inclinaison réelle du téléphone (si dispo)
 
-    // Applique une impulsion proportionnelle à la vitesse du mouvement vertical/horizontal
+    // Applique une impulsion proportionnelle mais plus douce à la vitesse du mouvement
     function applyWindowImpulse(dy, dx = 0) {
         const absDy = Math.abs(dy);
         const absDx = Math.abs(dx);
-        if (absDy < 0.1 && absDx < 0.1) return;
+        if (absDy < 0.4 && absDx < 0.4) return;
 
-        // Réponse non-linéaire : un petit scroll bouge très peu, un coup sec bouge beaucoup
-        const nonLinearY = Math.sign(dy) * Math.min(140, Math.pow(absDy, 1.32));
+        // Réponse progressive : très discret sur un petit scroll, plus marqué sur un grand geste
+        const nonLinearY = Math.sign(dy) * Math.min(60, Math.pow(absDy, 1.12));
 
         pendulums.forEach((p) => {
-            // Si la boule oscille déjà vite, l'accélération verticale amplifie son élan naturel
-            const swingSign = Math.abs(p.omega) > 0.45
+            const swingSign = Math.abs(p.omega) > 0.4
                 ? Math.sign(p.omega) * Math.sign(dy || 1)
                 : Math.sign(dy || 1) * p.eccentricity;
 
-            // Impulsion angulaire (balancement de gauche à droite)
-            const angularKick = (nonLinearY * 0.048 * swingSign + dx * 0.032) * (75 / p.length);
+            // Impulsion angulaire adoucie
+            const angularKick = (nonLinearY * 0.016 * swingSign + dx * 0.011) * (75 / p.length);
             p.omega = Math.max(-MAX_OMEGA, Math.min(MAX_OMEGA, p.omega + angularKick));
 
-            // Impulsion verticale (effet de gravité / tirage sur le fil doré)
-            const verticalKick = -nonLinearY * 2.35 * p.bounceScale;
-            p.velY = Math.max(-240, Math.min(240, p.velY + verticalKick));
+            // Impulsion verticale adoucie sur le fil doré
+            const verticalKick = -nonLinearY * 0.85 * p.bounceScale;
+            p.velY = Math.max(-95, Math.min(95, p.velY + verticalKick));
         });
     }
 
@@ -1807,7 +1806,7 @@ function initHangingBaublesPhysics() {
         lastScrollY = currentY;
         lastScrollEventTime = performance.now();
 
-        if (Math.abs(dy) > 0.2) {
+        if (Math.abs(dy) > 0.4) {
             applyWindowImpulse(dy, 0);
         }
     }, { passive: true });
@@ -1827,7 +1826,7 @@ function initHangingBaublesPhysics() {
         if (!e.touches || e.touches.length === 0 || lastTouchY === null) return;
         const y = e.touches[0].clientY;
         const x = e.touches[0].clientX;
-        const fingerDy = lastTouchY - y; // positif quand on descend dans la page
+        const fingerDy = lastTouchY - y;
         const fingerDx = x - lastTouchX;
         lastTouchY = y;
         lastTouchX = x;
@@ -1835,11 +1834,10 @@ function initHangingBaublesPhysics() {
         const now = performance.now();
         const scrolledRecently = (now - lastScrollEventTime) < 28;
 
-        // Si la page ne défile pas (ex: déjà tout en haut ou tout en bas), le coup de doigt fait quand même bouger les boules
         if (!scrolledRecently) {
-            applyWindowImpulse(fingerDy * 0.72, fingerDx * 0.55);
-        } else if (Math.abs(fingerDx) > 0.5) {
-            applyWindowImpulse(0, fingerDx * 0.45);
+            applyWindowImpulse(fingerDy * 0.42, fingerDx * 0.28);
+        } else if (Math.abs(fingerDx) > 0.8) {
+            applyWindowImpulse(0, fingerDx * 0.22);
         }
     }, { passive: true });
 
@@ -1852,15 +1850,15 @@ function initHangingBaublesPhysics() {
     window.addEventListener('wheel', (e) => {
         const now = performance.now();
         if ((now - lastScrollEventTime) > 28) {
-            applyWindowImpulse(e.deltaY * 0.32, e.deltaX * 0.2);
+            applyWindowImpulse(e.deltaY * 0.18, e.deltaX * 0.12);
         }
     }, { passive: true });
 
     // 4. Support gyroscope / inclinaison du téléphone (si disponible)
     window.addEventListener('deviceorientation', (e) => {
         if (typeof e.gamma === 'number') {
-            const clampedGamma = Math.max(-35, Math.min(35, e.gamma));
-            tiltTargetAngle = (clampedGamma * Math.PI) / 180 * 0.35;
+            const clampedGamma = Math.max(-30, Math.min(30, e.gamma));
+            tiltTargetAngle = (clampedGamma * Math.PI) / 180 * 0.22;
         }
     }, { passive: true });
 
@@ -1875,8 +1873,8 @@ function initHangingBaublesPhysics() {
         for (let i = 0; i < pendulums.length; i++) {
             const p = pendulums[i];
 
-            // Très léger souffle ambiant au repos pour que les boules restent vivantes
-            const ambientAngle = Math.sin(t * 1.15 + p.phase) * 0.014;
+            // Très léger souffle ambiant au repos
+            const ambientAngle = Math.sin(t * 1.05 + p.phase) * 0.01;
             const targetEq = tiltTargetAngle + ambientAngle;
 
             // Équation du pendule sous gravité : d²θ/dt² = -(g / L) * sin(θ - θ_eq) - damping * ω
@@ -1887,20 +1885,20 @@ function initHangingBaublesPhysics() {
             // Butées souples si l'angle dépasse la limite maximale
             if (p.angle > MAX_ANGLE) {
                 p.angle = MAX_ANGLE;
-                p.omega *= -0.45;
+                p.omega *= -0.4;
             } else if (p.angle < -MAX_ANGLE) {
                 p.angle = -MAX_ANGLE;
-                p.omega *= -0.45;
+                p.omega *= -0.4;
             }
 
-            // Force centrifuge du pendule qui tire légèrement sur le fil quand il balance fort
-            const centrifugalPull = Math.min(6, (p.omega * p.omega * p.length) * 0.012);
+            // Force centrifuge douce sur le fil
+            const centrifugalPull = Math.min(3, (p.omega * p.omega * p.length) * 0.008);
 
             // Ressort vertical (rebond sur le fil doré)
             const accY = -SPRING_K * (p.bounceY - centrifugalPull) - SPRING_DAMP * p.velY;
             p.velY += accY * dt;
             p.bounceY += p.velY * dt;
-            p.bounceY = Math.max(-9, Math.min(14, p.bounceY));
+            p.bounceY = Math.max(-4.5, Math.min(6.5, p.bounceY));
 
             const deg = (p.angle * 180) / Math.PI;
             p.groupEl.style.transform = `rotate(${deg.toFixed(2)}deg)`;

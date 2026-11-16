@@ -6,32 +6,53 @@ const DEV_MODE = true;
 const STORAGE_KEY = 'advent_opened_days_v1';
 const GAMES_WON_KEY = 'advent_games_won_v1';
 
+/* =========================================================================
+   CONFIGURATION DE LA QUESTION D'ACCÈS (ROTATION AUTOMATIQUE)
+   - QUESTION_ROTATION_HOURS : durée (en heures) avant de passer à la question suivante
+   - GATE_QUESTIONS : liste des questions et réponses acceptées (insensible aux majuscules/accents)
+   ========================================================================= */
+const QUESTION_ROTATION_HOURS = 24;
+
+const GATE_QUESTIONS = [
+    {
+        question: "Quelle est ma couleur préférée ?",
+        // Mets ici uniquement ta vraie couleur préférée si tu veux restreindre à une seule réponse :
+        answers: [
+            "bleu", "vert", "noir", "rouge", "blanc", "rose", "violet",
+            "jaune", "orange", "gris", "marron", "beige", "bordeaux",
+            "marine", "turquoise", "kaki", "corail", "lavande"
+        ]
+    }
+    // Tu peux ajouter d'autres questions ici qui tourneront toutes les X heures :
+    // {
+    //     question: "Où avons-nous passé notre premier week-end ?",
+    //     answers: ["cap ferret", "ferret", "bordeaux"]
+    // }
+];
+
 const calendarData = Array.from({ length: 24 }, (_, i) => {
     const day = i + 1;
 
     if (day === 4) {
         return {
             day: 4,
-            title: "Le Sunset du Ferret",
             game: "ferret",
             gameTitle: "L'Ascension de la Dune",
             gameSubtitle: "Défi Cap Ferret • 22 secondes",
-            content: `Bravo, tu es arrivée en haut de la dune juste à temps pour voir le soleil plonger dans l'océan (et sans aucune pomme de pin sous le pied).<br><br>Voici ta surprise du 4 décembre...`
+            content: `Bravo, tu es arrivée en haut de la dune juste à temps pour voir le soleil plonger dans l'océan (et sans aucune pomme de pin sous le pied).<br><br>Voici ton petit mot du 4 décembre...`
         };
     }
 
     if (day === 20) {
         return {
             day: 20,
-            title: "Défi de fin décembre",
             game: null,
-            content: `Surprise du 20 décembre.`
+            content: `Voici le petit mot ou l'indice pour la journée du 20 décembre.`
         };
     }
 
     return {
         day: day,
-        title: `Surprise du ${day} décembre`,
         content: `Voici le petit mot ou l'indice pour la journée du ${day} décembre.`
     };
 });
@@ -41,14 +62,19 @@ let gamesWon = JSON.parse(localStorage.getItem(GAMES_WON_KEY)) || [];
 let activeGameCleanup = null;
 
 const gridEl = document.getElementById('calendar-grid');
-const progressTextEl = document.getElementById('progress-text');
-const progressFillEl = document.getElementById('header-progress-fill');
 const modalOverlay = document.getElementById('modal-overlay');
 const modalClose = document.getElementById('modal-close');
 const modalDay = document.getElementById('modal-day');
-const modalTitle = document.getElementById('modal-title');
 const modalBody = document.getElementById('modal-body');
 const toastEl = document.getElementById('toast');
+
+// Éléments Écran d'accès (Gate)
+const gateOverlay = document.getElementById('gate-overlay');
+const gateCard = document.getElementById('gate-card');
+const gateQuestionEl = document.getElementById('gate-question');
+const gateForm = document.getElementById('gate-form');
+const gateInput = document.getElementById('gate-input');
+const gateError = document.getElementById('gate-error');
 
 // Éléments Plein Écran
 const fsOverlay = document.getElementById('fs-game-overlay');
@@ -65,19 +91,53 @@ const fsEndBtn = document.getElementById('fs-end-btn');
 
 let toastTimeout;
 
+function normalizeAnswer(str) {
+    return (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/^(le |la |l'|les |un |une )/i, '')
+        .trim();
+}
+
+function getActiveGateQuestion() {
+    if (!GATE_QUESTIONS.length) {
+        return { question: "Quelle est ma couleur préférée ?", answers: ["bleu"] };
+    }
+    const rotationMs = Math.max(1, QUESTION_ROTATION_HOURS) * 3600 * 1000;
+    const index = Math.floor(Date.now() / rotationMs) % GATE_QUESTIONS.length;
+    return GATE_QUESTIONS[index];
+}
+
+function initGate() {
+    if (!gateOverlay || !gateForm) return;
+    const activeQ = getActiveGateQuestion();
+    gateQuestionEl.textContent = activeQ.question;
+
+    gateForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const userVal = normalizeAnswer(gateInput.value);
+        const isValid = activeQ.answers.some((ans) => normalizeAnswer(ans) === userVal);
+
+        if (isValid) {
+            gateError.textContent = '';
+            gateInput.blur();
+            gateOverlay.classList.add('unlocked');
+            gateOverlay.setAttribute('aria-hidden', 'true');
+        } else {
+            gateError.textContent = 'Mauvaise réponse, réessaie…';
+            gateCard.classList.remove('shake');
+            void gateCard.offsetWidth;
+            gateCard.classList.add('shake');
+            gateInput.select();
+        }
+    });
+}
+
 function isDayUnlocked(dayNumber) {
     if (DEV_MODE) return true;
     const now = new Date();
     return now.getMonth() === 11 && now.getDate() >= dayNumber;
-}
-
-function updateProgress() {
-    const count = openedDays.length;
-    progressTextEl.textContent = `${count} sur 24 ${count > 1 ? 'découverts' : 'découvert'}`;
-    if (progressFillEl) {
-        const pct = Math.min(100, Math.round((count / 24) * 100));
-        progressFillEl.style.width = `${pct}%`;
-    }
 }
 
 function showToast(message) {
@@ -99,7 +159,6 @@ function stopActiveGame() {
 /* Ouvre la modale du jour avec la petite box cliquable pour le jeu */
 function openModal(item) {
     modalDay.textContent = `${item.day} Décembre`;
-    modalTitle.textContent = item.title;
     modalBody.innerHTML = '';
 
     const hasWon = gamesWon.includes(item.day);
@@ -870,7 +929,6 @@ function renderGrid() {
             card.innerHTML = `
                 <span class="day-kicker">Veille de Noël</span>
                 <span class="day-number">${item.day}</span>
-                <span class="day-subtitle-24">La grande surprise du réveillon</span>
                 <div class="day-status-row">
                     <span class="day-dot"></span>
                 </div>
@@ -897,7 +955,6 @@ function renderGrid() {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(openedDays));
                 card.classList.remove('available');
                 card.classList.add('opened');
-                updateProgress();
             }
 
             openModal(item);
@@ -905,8 +962,6 @@ function renderGrid() {
 
         gridEl.appendChild(card);
     });
-
-    updateProgress();
 }
 
 modalClose.addEventListener('click', closeModal);
@@ -924,4 +979,5 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
+initGate();
 renderGrid();

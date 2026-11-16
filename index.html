@@ -13,10 +13,10 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#FAF7F2">
 
-    <title>Calendrier de l'Avent — En attendant Noël</title>
-    <meta name="description" content="Un calendrier de l'Avent interactif et élégant avec surprises quotidiennes et mini-jeu d'ascension de la dune au Cap Ferret.">
-    <meta property="og:title" content="Calendrier de l'Avent — En attendant Noël">
-    <meta property="og:description" content="Un calendrier de l'Avent interactif et élégant avec surprises quotidiennes et mini-jeu d'ascension de la dune au Cap Ferret.">
+    <title>Calendrier de l'Avent — Pour ma Clara</title>
+    <meta name="description" content="Un calendrier de l'Avent interactif et personnalisé pour Clara.">
+    <meta property="og:title" content="Calendrier de l'Avent — Pour ma Clara">
+    <meta property="og:description" content="Un calendrier de l'Avent interactif et personnalisé pour Clara.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +31,40 @@
         <div class="ambient-orb ambient-orb-2"></div>
     </div>
 
-    <main class="app-container">
+    <!-- Écran d'accès (Question secrète au début de chaque connexion) -->
+    <div class="gate-overlay" id="gate-overlay" aria-hidden="false">
+        <div class="gate-card" id="gate-card">
+            <div class="header-ornament" aria-hidden="true">
+                <span class="ornament-line"></span>
+                <svg class="ornament-star" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8L12 2Z" fill="currentColor"/>
+                </svg>
+                <span class="ornament-line"></span>
+            </div>
+
+            <span class="gate-kicker">Accès Privé • Clara</span>
+            <h1 class="gate-question" id="gate-question">Quelle est ma couleur préférée ?</h1>
+
+            <form class="gate-form" id="gate-form" autocomplete="off">
+                <div class="gate-input-wrap">
+                    <input
+                        type="text"
+                        id="gate-input"
+                        class="gate-input"
+                        placeholder="Ta réponse..."
+                        required
+                        autocomplete="off"
+                        autocorrect="off"
+                        spellcheck="false"
+                    />
+                </div>
+                <p class="gate-error" id="gate-error" aria-live="polite"></p>
+                <button type="submit" class="btn-sober gate-submit">Entrer</button>
+            </form>
+        </div>
+    </div>
+
+    <main class="app-container" id="app-main">
         <header class="header">
             <div class="header-ornament" aria-hidden="true">
                 <span class="ornament-line"></span>
@@ -40,38 +73,24 @@
                 </svg>
                 <span class="ornament-line"></span>
             </div>
-            <span class="subtitle">Édition Décembre</span>
-            <h1 class="title">En attendant Noël</h1>
-            <p class="header-tagline">Vingt-quatre instants précieux à dévoiler jour après jour</p>
-
-            <div class="progress-wrapper">
-                <div class="progress-meta">
-                    <span class="progress-label">Progression</span>
-                    <span class="progress-text" id="progress-text">0 sur 24 découverts</span>
-                </div>
-                <div class="header-progress-track">
-                    <div class="header-progress-fill" id="header-progress-fill"></div>
-                </div>
-            </div>
         </header>
 
         <section class="calendar-grid" id="calendar-grid" aria-label="Jours du calendrier de l'Avent"></section>
 
         <footer class="app-footer">
-            <span>Créé avec soin • Joyeuses Fêtes</span>
+            <span>Pour ma Clara</span>
         </footer>
     </main>
 
     <!-- Tiroir Modal (Bottom Sheet) -->
     <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
-        <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-day">
             <div class="modal-handle"></div>
             <button class="modal-close" id="modal-close" aria-label="Fermer">&times;</button>
             <div class="modal-content">
                 <div class="modal-day-header">
                     <span class="modal-day" id="modal-day">1 Décembre</span>
                 </div>
-                <h2 class="modal-title" id="modal-title">Titre du jour</h2>
                 <div class="modal-divider" aria-hidden="true">
                     <span></span>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none">

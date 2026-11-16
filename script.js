@@ -48,7 +48,8 @@ const DAY_ASSIGNMENTS = {
     3: 'quiz_ete',               // Jour 3 : Quiz « Tu te souviens de notre été ? »
     4: 'ferret_dune',            // Jour 4 : Mini-jeu « L'Ascension de la Dune » (Cap Ferret)
     5: 'coupon_chanson',         // Jour 5 : Ticket à découper « Bon pour une chanson à 2 où JE chante »
-    6: 'scratch_photo_1'         // Jour 6 : Carte à gratter réaliste avec « image1.png »
+    6: 'scratch_photo_1',        // Jour 6 : Cartes à gratter réalistes avec « image1.png » et « image2.png »
+    7: 'scratch_photo_2'         // Jour 7 : Cartes à gratter réalistes avec « image3.png » et « image4.png »
 };
 
 /* =========================================================================
@@ -80,6 +81,32 @@ const SURPRISES_CATALOG = {
             }
         ],
         content: "Notre première sortie tout les deux 😭"
+    },
+
+    scratch_photo_2: {
+        game: "scratch_card",
+        gameTitle: "Tickets d'Or à Gratter",
+        gameSubtitle: "Surprise cachée • 2 Cartes à gratter",
+        imageSrc: "/assets/image3.png",
+        cards: [
+            {
+                id: "day7_img3",
+                label: "Carte n°1",
+                imageSrc: "/assets/image3.png",
+                captionThreshold: 50,
+                revealThreshold: 50,
+                caption: "on ira Clara promis."
+            },
+            {
+                id: "day7_img4",
+                label: "Carte n°2",
+                imageSrc: "/assets/image4.png",
+                captionThreshold: 50,
+                revealThreshold: 50,
+                caption: "la plage des dunes ... j'en parlerais dans mon livre"
+            }
+        ],
+        content: "la plage des dunes ... j'en parlerais dans mon livre"
     },
 
     spotify_just_two_of_us: {

@@ -1495,20 +1495,14 @@ function launchFullscreenScratchCard(item, startCardIndex = 0) {
         }
     }
 
-    function completeScratchReveal() {
+    function unlockCardMilestone(card) {
         if (isRevealed) return;
         isRevealed = true;
-        isScratching = false;
-        pointerPos = null;
 
-        const card = cards[currentCardIndex];
         revealCaptionIfNeeded(card, 100);
 
-        scratchFoilCanvas.classList.add('revealed');
-        fsScratchTopLabel.textContent = `${card.label || 'Carte à Gratter'} • 100%`;
-        scratchFooterText.textContent = '✨ Surprise dévoilée !';
-
-        // Bouton d'action : s'il y a une 2ème carte après celle-ci, propose de passer à la 2ème carte !
+        // Bouton d'action : s'il y a une 2ème carte après celle-ci, propose de passer à la 2ème carte,
+        // tout en laissant Clara continuer de gratter tout le reste de la carte elle-même !
         scratchDoneBtn.hidden = false;
         if (currentCardIndex < cards.length - 1) {
             scratchDoneBtn.textContent = `Passer à la ${cards[currentCardIndex + 1].label.toLowerCase()} à gratter →`;
@@ -1520,17 +1514,6 @@ function launchFullscreenScratchCard(item, startCardIndex = 0) {
             scratchDoneBtn.onclick = () => {
                 closeFullscreenScratchCard();
             };
-        }
-
-        // Pluie de paillettes dorées à la révélation
-        for (let i = 0; i < 48; i++) {
-            spawnFoilShavings(
-                vw * (0.15 + Math.random() * 0.7),
-                vh * (0.2 + Math.random() * 0.6),
-                (Math.random() - 0.5) * 80,
-                -60,
-                1
-            );
         }
 
         if (!scratchedCardIds.includes(card.id)) {
@@ -1556,21 +1539,25 @@ function launchFullscreenScratchCard(item, startCardIndex = 0) {
     }
 
     function checkProgress() {
-        if (isRevealed) return;
         const card = cards[currentCardIndex];
         const pct = computeScratchedPercentage();
         fsScratchTopLabel.textContent = `${card.label || 'Carte à Gratter'} • ${pct}%`;
 
+        if (pct >= 96) {
+            scratchFooterText.textContent = '✨ Carte entièrement grattée !';
+        } else if (pct >= 50) {
+            scratchFooterText.textContent = 'Continue de gratter pour tout découvrir ✨';
+        }
+
         revealCaptionIfNeeded(card, pct);
 
-        const revealTarget = card.revealThreshold || 55;
-        if (pct >= revealTarget) {
-            completeScratchReveal();
+        const unlockTarget = card.revealThreshold || 50;
+        if (pct >= unlockTarget && !isRevealed) {
+            unlockCardMilestone(card);
         }
     }
 
     function scratchTo(clientX, clientY) {
-        if (isRevealed) return;
         const rect = scratchViewport.getBoundingClientRect();
         const x = clientX - rect.left;
         const y = clientY - rect.top;
@@ -1647,7 +1634,7 @@ function launchFullscreenScratchCard(item, startCardIndex = 0) {
         }
 
         // 2. Dessin de la pièce d'or inclinée sous le doigt pendant le grattage
-        if (isScratching && pointerPos && !isRevealed) {
+        if (isScratching && pointerPos) {
             const px = pointerPos.x;
             const py = pointerPos.y;
             fxCtx.save();
@@ -1692,7 +1679,6 @@ function launchFullscreenScratchCard(item, startCardIndex = 0) {
     }
 
     const onTouchStart = (e) => {
-        if (isRevealed) return;
         isScratching = true;
         lastPt = null;
         if (e.touches && e.touches.length > 0) {
@@ -1701,7 +1687,7 @@ function launchFullscreenScratchCard(item, startCardIndex = 0) {
     };
 
     const onTouchMove = (e) => {
-        if (!isScratching || isRevealed) return;
+        if (!isScratching) return;
         if (e.touches && e.touches.length > 0) {
             scratchTo(e.touches[0].clientX, e.touches[0].clientY);
         }
@@ -1716,14 +1702,13 @@ function launchFullscreenScratchCard(item, startCardIndex = 0) {
     };
 
     const onMouseDown = (e) => {
-        if (isRevealed) return;
         isScratching = true;
         lastPt = null;
         scratchTo(e.clientX, e.clientY);
     };
 
     const onMouseMove = (e) => {
-        if (!isScratching || isRevealed) return;
+        if (!isScratching) return;
         scratchTo(e.clientX, e.clientY);
     };
 

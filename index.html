@@ -439,6 +439,36 @@
         </div>
     </div>
 
+    <!-- Conteneur Plein Écran pour la Roue de la Chance (Jour 9) -->
+    <div class="fs-wheel-overlay" id="fs-wheel-overlay" aria-hidden="true">
+        <div class="fs-quiz-topbar">
+            <div class="fs-quiz-progress">
+                <span class="fs-quiz-step-label" id="fs-wheel-top-label">Roue de la Chance</span>
+            </div>
+            <button class="fs-quiz-close-btn" id="fs-wheel-close-btn" aria-label="Fermer">&times;</button>
+        </div>
+
+        <div class="fs-wheel-stage">
+            <div class="wheel-card-shell">
+                <div class="wheel-header">
+                    <span class="wheel-kicker">9 Décembre • Tirage au Sort</span>
+                    <h2 class="wheel-title">La Roue de la Chance</h2>
+                </div>
+
+                <div class="wheel-canvas-wrap" id="wheel-canvas-wrap">
+                    <canvas id="wheel-canvas" class="wheel-canvas"></canvas>
+                </div>
+
+                <div class="wheel-controls">
+                    <p class="wheel-hint" id="wheel-hint">Lance la roue avec ton doigt ou appuie sur le bouton</p>
+                    <button type="button" class="btn-sober wheel-spin-btn" id="wheel-spin-btn">
+                        Tourner la roue ✨
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast">Patience...</div>
 
     <script type="module" src="/script.js"></script>

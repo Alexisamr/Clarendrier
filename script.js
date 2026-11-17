@@ -50,7 +50,9 @@ const DAY_ASSIGNMENTS = {
     5: 'coupon_chanson',         // Jour 5 : Ticket à découper « Bon pour une chanson à 2 où JE chante »
     6: 'scratch_photo_1',        // Jour 6 : Cartes à gratter réalistes avec « image1.png » et « image2.png »
     7: 'scratch_photo_2',        // Jour 7 : Cartes à gratter réalistes avec « image3.png » et « image4.png »
-    8: 'midnight_swim'           // Jour 8 : Mini-jeu contemplatif « Bain de Minuit & Phytoplancton » (Cap Ferret)
+    8: 'midnight_swim',          // Jour 8 : Mini-jeu contemplatif « Bain de Minuit & Phytoplancton » (Cap Ferret)
+    9: 'lucky_wheel',            // Jour 9 : Roue de la Chance (vide pour l'instant, dans la DA du site)
+    10: 'coupon_spiderman'       // Jour 10 : Ticket à découper « Bon pour aller voir Spider-Man au ciné »
 };
 
 /* =========================================================================
@@ -143,6 +145,18 @@ const SURPRISES_CATALOG = {
         content: "Bon pour une chanson à 2 où JE chante (chippie va)"
     },
 
+    coupon_spiderman: {
+        game: "coupon",
+        theme: "red",
+        gameTitle: "Ticket Cadeau à Découper",
+        gameSubtitle: "Bon Exclusif • Ticket à découper",
+        couponBadge: "BON CADEAU EXCLUSIF • N° 03",
+        couponTitle: "Bon pour aller voir Spider-Man au ciné dès le premier week-end des vacances de Noël",
+        couponClause: "(il ressort au ciné avec de nouvelles scènes)",
+        couponStamp: "SÉANCE CINÉ • TOUS LES DEUX ❤️",
+        content: "Bon pour aller voir Spider-Man au ciné dès le premier week-end des vacances de Noël (il ressort au ciné avec de nouvelles scènes)"
+    },
+
     quiz_ete: {
         game: "quiz_ete",
         gameTitle: "Tu te souviens de notre été ?",
@@ -230,9 +244,26 @@ const SURPRISES_CATALOG = {
 
     midnight_swim: {
         game: "midnight_swim",
-        gameTitle: "Bain de Minuit au Cap Ferret",
-        gameSubtitle: "Dernière soirée • Ciel étoilé & Phytoplancton",
+        gameTitle: "Bain de Minuit au Cap",
+        gameSubtitle: "Dernière soirée",
         content: ""
+    },
+
+    lucky_wheel: {
+        game: "lucky_wheel",
+        gameTitle: "La Roue de la Chance",
+        gameSubtitle: "Tirage au Sort",
+        content: "",
+        segments: [
+            { label: "", color: "#1E352B", textColor: "#FAF7F2" },
+            { label: "", color: "#FAF7F2", textColor: "#1A211E" },
+            { label: "", color: "#9E2A2B", textColor: "#FAF7F2" },
+            { label: "", color: "#F2EAE0", textColor: "#1A211E" },
+            { label: "", color: "#1E352B", textColor: "#FAF7F2" },
+            { label: "", color: "#FAF7F2", textColor: "#1A211E" },
+            { label: "", color: "#9E2A2B", textColor: "#FAF7F2" },
+            { label: "", color: "#F2EAE0", textColor: "#1A211E" }
+        ]
     }
 };
 
@@ -334,6 +365,13 @@ const scratchFxCanvas = document.getElementById('scratch-fx-canvas');
 const scratchPhotoCaption = document.getElementById('scratch-photo-caption');
 const scratchFooterText = document.getElementById('scratch-footer-text');
 const scratchDoneBtn = document.getElementById('scratch-done-btn');
+
+// Éléments Plein Écran (Roue de la Chance - Jour 9)
+const fsWheelOverlay = document.getElementById('fs-wheel-overlay');
+const fsWheelCloseBtn = document.getElementById('fs-wheel-close-btn');
+const wheelCanvas = document.getElementById('wheel-canvas');
+const wheelHint = document.getElementById('wheel-hint');
+const wheelSpinBtn = document.getElementById('wheel-spin-btn');
 
 let scratchedCardIds = JSON.parse(localStorage.getItem(SCRATCHED_CARDS_KEY) || '[]');
 
@@ -1174,6 +1212,22 @@ function openModal(item) {
             launchFullscreenMidnightSwim(item);
         });
         modalBody.appendChild(launchBox);
+    } else if (item.game === 'lucky_wheel') {
+        const wheelBox = document.createElement('div');
+        wheelBox.className = 'wheel-launch-box';
+        wheelBox.innerHTML = `
+            <div class="game-launch-content">
+                <span class="game-launch-tag">${item.gameSubtitle}</span>
+                <h3 class="game-launch-title">${item.gameTitle}</h3>
+                <div class="game-launch-cta">
+                    <span>✨ Faire tourner la roue</span>
+                </div>
+            </div>
+        `;
+        wheelBox.addEventListener('click', () => {
+            launchFullscreenLuckyWheel(item);
+        });
+        modalBody.appendChild(wheelBox);
     } else {
         modalBody.innerHTML = `<div>${item.content}</div>`;
     }
@@ -3138,7 +3192,7 @@ function launchFullscreenMidnightSwim(item) {
     if (fsStatsEl) fsStatsEl.style.display = 'none';
     if (fsTimer) fsTimer.style.display = 'none';
 
-    fsHint.textContent = 'Avance du sable vers la mer, puis déplace-toi dans l’eau ✨';
+    fsHint.textContent = "Va jouer dans l'eau et reviens me voir 😁";
     fsHint.style.opacity = '1';
 
     const canvas = document.getElementById('ferret-canvas');
@@ -3148,8 +3202,10 @@ function launchFullscreenMidnightSwim(item) {
     let height = window.innerHeight;
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
 
-    let horizonY = height * 0.43;   // Ligne d'horizon où le ciel étoilé touche l'océan
-    let shorelineY = height * 0.82; // Limite entre le sable en bas et l'eau peu profonde
+    let baseHorizonY = height * 0.43;
+    let baseShorelineY = height * 0.82;
+    let horizonY = baseHorizonY;   // Ligne d'horizon où le ciel étoilé touche l'océan
+    let shorelineY = baseShorelineY; // Limite entre le sable en bas et l'eau peu profonde
 
     // Alexis assis sur la plage (non jouable, fin et tout beige, à côté du point de départ de Clara)
     const alexis = {
@@ -3163,11 +3219,14 @@ function launchFullscreenMidnightSwim(item) {
         canvas.width = width * dpr;
         canvas.height = height * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        horizonY = height * 0.43;
-        shorelineY = height * 0.82;
-        alexis.x = width * 0.36;
+        baseHorizonY = height * 0.43;
+        baseShorelineY = height * 0.82;
+        horizonY = baseHorizonY + (height * 0.76 - baseHorizonY) * skyExpandBlend;
+        shorelineY = baseShorelineY + (height * 0.86 - baseShorelineY) * skyExpandBlend;
+        alexis.x = width * (0.36 + 0.12 * skyExpandBlend);
         alexis.y = shorelineY + (height - shorelineY) * 0.48;
     }
+    let skyExpandBlend = 0;
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
@@ -3217,6 +3276,30 @@ function launchFullscreenMidnightSwim(item) {
     // Petits coeurs doux quand Clara s'assoit contre Alexis pour lui faire un câlin
     const hugHearts = [];
     let hugHeartTimer = 0;
+
+    // Suivi de la suite : 1) aller jouer dans l'eau, 2) revenir faire un câlin, 3) pause de quelques bonnes secondes, 4) suite sous les étoiles
+    let waterPlayTime = 0;
+    let hasPlayedInWater = false;
+    let postSwimHugTimer = 0;
+    let stargazePhase = false;
+    let stargazeIdleTimer = 0;
+    let constellationProgress = 0;
+    let heartRevealBlend = 0;
+    let constellationCompletedTimer = 0;
+    let finaleShown = false;
+    const starBursts = [];
+
+    // 4 étoiles guides disposées sur la courbe du cœur (quelques pressions suffisent avant de tracer le vrai cœur lisse)
+    const heartStarAngles = [Math.PI, Math.PI * 1.42, Math.PI * 0.58, 0];
+
+    function getSmoothHeartPoint(theta, centerX, centerY, heartScale) {
+        const hx = 16 * Math.pow(Math.sin(theta), 3);
+        const hy = -(13 * Math.cos(theta) - 5 * Math.cos(2 * theta) - 2 * Math.cos(3 * theta) - Math.cos(4 * theta));
+        return {
+            x: centerX + hx * heartScale,
+            y: centerY + hy * heartScale
+        };
+    }
 
     const keys = { left: false, right: false, up: false, down: false };
     let isPointerDown = false;
@@ -3401,9 +3484,103 @@ function launchFullscreenMidnightSwim(item) {
         openModal(item);
     }
 
-    // Contrôles tactiles & souris : se déplacer librement dans toutes les directions
+    // Note cristalline douce quand une étoile de la constellation s'allume dans le ciel
+    function playStarlightChime(stepIndex) {
+        const ac = ensureNightAudio();
+        if (!ac) return;
+        try {
+            const notes = [523.25, 659.25, 783.99, 880.0, 1046.5, 1318.5];
+            const freq = notes[stepIndex % notes.length];
+            const now = ac.currentTime;
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now);
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(0.11, now + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.0008, now + 1.6);
+
+            osc.connect(gain);
+            gain.connect(ac.destination);
+            osc.start(now);
+            osc.stop(now + 1.65);
+        } catch {
+            // Ignore si l'audio est bloqué
+        }
+    }
+
+    function triggerStargazeWish(clientX, clientY) {
+        if (!stargazePhase || finaleShown) return;
+        ensureNightAudio();
+
+        // Éclats d'étoiles sous le doigt
+        for (let i = 0; i < 14; i++) {
+            const a = (Math.PI * 2 * i) / 14 + Math.random() * 0.3;
+            const spd = 18 + Math.random() * 48;
+            starBursts.push({
+                x: clientX,
+                y: clientY,
+                vx: Math.cos(a) * spd,
+                vy: Math.sin(a) * spd,
+                r: 1.4 + Math.random() * 2.0,
+                life: 0.9 + Math.random() * 0.5
+            });
+        }
+
+        // Fait traverser une belle étoile filante
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        shootingStars.push({
+            x: clientX - dir * 80,
+            y: Math.max(30, clientY - 50),
+            vx: dir * (250 + Math.random() * 120),
+            vy: 90 + Math.random() * 60,
+            life: 0.85
+        });
+
+        // Dès qu'elle touche le ciel, on masque le petit texte d'aide s'il était affiché
+        fsHint.style.opacity = '0';
+
+        if (constellationProgress < heartStarAngles.length) {
+            const heartCenterX = width * 0.5;
+            const heartCenterY = horizonY * 0.42;
+            const heartScale = Math.min(width, horizonY) * 0.0078;
+            const pt = getSmoothHeartPoint(heartStarAngles[constellationProgress], heartCenterX, heartCenterY, heartScale);
+
+            for (let i = 0; i < 18; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const spd = 12 + Math.random() * 42;
+                starBursts.push({
+                    x: pt.x,
+                    y: pt.y,
+                    vx: Math.cos(a) * spd,
+                    vy: Math.sin(a) * spd,
+                    r: 1.6 + Math.random() * 2.2,
+                    life: 1.1 + Math.random() * 0.5
+                });
+            }
+            playStarlightChime(constellationProgress);
+            constellationProgress++;
+
+            if (constellationProgress >= heartStarAngles.length) {
+                // Pluie d'étoiles filantes finale quand le vrai cœur s'illumine automatiquement
+                for (let k = 0; k < 5; k++) {
+                    shootingStars.push({
+                        x: width * (0.15 + k * 0.17),
+                        y: horizonY * (0.08 + (k % 3) * 0.12),
+                        vx: (k % 2 === 0 ? 1 : -1) * (240 + k * 25),
+                        vy: 105 + k * 15,
+                        life: 0.95 + k * 0.15
+                    });
+                }
+            }
+        }
+    }
+
+    // Contrôles tactiles & souris : se déplacer librement ou, pendant la suite, illuminer le ciel étoilé
     const setPointerTarget = (clientX, clientY) => {
         ensureNightAudio();
+        if (stargazePhase) return;
         player.targetX = Math.max(28, Math.min(width - 28, clientX));
         player.targetY = Math.max(horizonY + 26, Math.min(height - 32, clientY));
     };
@@ -3411,11 +3588,16 @@ function launchFullscreenMidnightSwim(item) {
     const onTouchStart = (e) => {
         if (!e.touches || e.touches.length === 0) return;
         isPointerDown = true;
+        if (stargazePhase) {
+            triggerStargazeWish(e.touches[0].clientX, e.touches[0].clientY);
+            return;
+        }
         setPointerTarget(e.touches[0].clientX, e.touches[0].clientY);
     };
 
     const onTouchMove = (e) => {
         if (!isPointerDown || !e.touches || e.touches.length === 0) return;
+        if (stargazePhase) return;
         setPointerTarget(e.touches[0].clientX, e.touches[0].clientY);
     };
 
@@ -3427,6 +3609,10 @@ function launchFullscreenMidnightSwim(item) {
 
     const onMouseDown = (e) => {
         isPointerDown = true;
+        if (stargazePhase) {
+            triggerStargazeWish(e.clientX, e.clientY);
+            return;
+        }
         setPointerTarget(e.clientX, e.clientY);
     };
 
@@ -3551,6 +3737,106 @@ function launchFullscreenMidnightSwim(item) {
             ctx.moveTo(ss.x, ss.y);
             ctx.lineTo(tailX, tailY);
             ctx.stroke();
+        }
+
+        // 1b. SUITE SOUS LES ÉTOILES : ÉTOILES À TOUCHER PUIS VRAI CŒUR PARFAITEMENT COURBÉ
+        if (skyExpandBlend > 0.05) {
+            ctx.save();
+            const heartCenterX = width * 0.5;
+            const heartCenterY = horizonY * 0.42;
+            const heartScale = Math.min(width, horizonY) * 0.0078;
+
+            // Dès qu'elle a terminé ses quelques pressions, trace automatiquement un vrai cœur bien arrondi sans angle bizarre
+            if (heartRevealBlend > 0.01) {
+                const maxSteps = 140;
+                const stepsToDraw = Math.max(2, Math.floor(maxSteps * heartRevealBlend));
+
+                ctx.save();
+                ctx.beginPath();
+                for (let s = 0; s <= stepsToDraw; s++) {
+                    const theta = (s / maxSteps) * Math.PI * 2;
+                    const pt = getSmoothHeartPoint(theta, heartCenterX, heartCenterY, heartScale);
+                    if (s === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                }
+                if (heartRevealBlend >= 0.99) {
+                    ctx.closePath();
+                    const fillGrad = ctx.createRadialGradient(
+                        heartCenterX, heartCenterY, 4,
+                        heartCenterX, heartCenterY, heartScale * 18
+                    );
+                    fillGrad.addColorStop(0, `rgba(255, 190, 210, ${0.14 * heartRevealBlend})`);
+                    fillGrad.addColorStop(0.6, `rgba(0, 245, 212, ${0.08 * heartRevealBlend})`);
+                    fillGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = fillGrad;
+                    ctx.fill();
+                }
+
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.shadowColor = 'rgba(0, 245, 212, 0.85)';
+                ctx.shadowBlur = 12;
+                ctx.strokeStyle = `rgba(235, 252, 255, ${0.88 * Math.min(1, heartRevealBlend * 1.2)})`;
+                ctx.lineWidth = 2.2;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Étoiles guides que Clara touche (celles allumées + la prochaine qui pulse doucement)
+            for (let i = 0; i < heartStarAngles.length; i++) {
+                const pt = getSmoothHeartPoint(heartStarAngles[i], heartCenterX, heartCenterY, heartScale);
+                const cx = pt.x;
+                const cy = pt.y;
+                const isLit = i < constellationProgress;
+                const isNext = i === constellationProgress && stargazePhase;
+
+                if (isLit) {
+                    const glowG = ctx.createRadialGradient(cx, cy, 1, cx, cy, 15);
+                    glowG.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+                    glowG.addColorStop(0.4, 'rgba(0, 245, 212, 0.55)');
+                    glowG.addColorStop(1, 'rgba(0, 245, 212, 0)');
+                    ctx.fillStyle = glowG;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 3.0, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (isNext && skyExpandBlend > 0.5) {
+                    const pulse = 0.45 + 0.45 * Math.sin(t * 4.2);
+                    ctx.strokeStyle = `rgba(0, 245, 212, ${pulse * skyExpandBlend})`;
+                    ctx.lineWidth = 1.3;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 7 + (1 - pulse) * 6, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = `rgba(255, 250, 235, ${(0.5 + pulse * 0.5) * skyExpandBlend})`;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 2.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Éclats d'étoiles lors du toucher
+            for (let i = starBursts.length - 1; i >= 0; i--) {
+                const sb = starBursts[i];
+                sb.x += sb.vx * dt;
+                sb.y += sb.vy * dt;
+                sb.vx *= 0.95;
+                sb.vy *= 0.95;
+                sb.life -= dt;
+                if (sb.life <= 0) {
+                    starBursts.splice(i, 1);
+                    continue;
+                }
+                ctx.fillStyle = `rgba(210, 255, 250, ${Math.min(1, sb.life)})`;
+                ctx.beginPath();
+                ctx.arc(sb.x, sb.y, sb.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
         }
 
         // 2. GRANDE ÉTENDUE D'EAU PEU PROFONDE SUR LA PLAGE (entre horizonY et shorelineY)
@@ -4162,40 +4448,53 @@ function launchFullscreenMidnightSwim(item) {
         let desiredVx = 0;
         let desiredVy = 0;
 
-        // Vérifie si le joueur demande de s'éloigner d'Alexis
+        // Vérifie si le joueur demande de s'éloigner d'Alexis (uniquement avant la phase finale sous les étoiles)
         let wantsToLeaveHug = false;
 
-        if (player.targetX !== null && player.targetY !== null) {
-            const distTargetFromAlexis = Math.hypot(player.targetX - (alexis.x + 14), player.targetY - alexis.y);
-            if (player.isHugging && distTargetFromAlexis > 42) {
-                wantsToLeaveHug = true;
-            }
-            const dx = player.targetX - player.x;
-            const dy = player.targetY - player.y;
-            const dist = Math.hypot(dx, dy);
-            if (dist > 6) {
-                const factor = Math.min(1, dist / 42);
-                desiredVx = (dx / dist) * maxSpeed * factor;
-                desiredVy = (dy / dist) * maxSpeed * factor;
-            }
-        } else {
-            let kx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-            let ky = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
-            const kLen = Math.hypot(kx, ky);
-            if (kLen > 0) {
-                desiredVx = (kx / kLen) * maxSpeed;
-                desiredVy = (ky / kLen) * maxSpeed;
-                if (player.isHugging) {
-                    const moveAwayDot = kx * (player.x - alexis.x) + ky * (player.y - alexis.y);
-                    if (moveAwayDot > 0 || ky < 0) {
-                        wantsToLeaveHug = true;
+        if (!stargazePhase) {
+            if (player.targetX !== null && player.targetY !== null) {
+                const distTargetFromAlexis = Math.hypot(player.targetX - (alexis.x + 14), player.targetY - alexis.y);
+                if (player.isHugging && distTargetFromAlexis > 42) {
+                    wantsToLeaveHug = true;
+                }
+                const dx = player.targetX - player.x;
+                const dy = player.targetY - player.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 6) {
+                    const factor = Math.min(1, dist / 42);
+                    desiredVx = (dx / dist) * maxSpeed * factor;
+                    desiredVy = (dy / dist) * maxSpeed * factor;
+                }
+            } else {
+                let kx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+                let ky = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+                const kLen = Math.hypot(kx, ky);
+                if (kLen > 0) {
+                    desiredVx = (kx / kLen) * maxSpeed;
+                    desiredVy = (ky / kLen) * maxSpeed;
+                    if (player.isHugging) {
+                        const moveAwayDot = kx * (player.x - alexis.x) + ky * (player.y - alexis.y);
+                        if (moveAwayDot > 0 || ky < 0) {
+                            wantsToLeaveHug = true;
+                        }
                     }
                 }
             }
         }
 
-        if (wantsToLeaveHug) {
+        if (wantsToLeaveHug && !stargazePhase) {
             player.isHugging = false;
+            postSwimHugTimer = 0;
+        }
+
+        // Transition fluide du ciel étoilé pendant la suite (stargazePhase)
+        if (stargazePhase) {
+            skyExpandBlend += (1 - skyExpandBlend) * Math.min(1, dt * 1.4);
+            horizonY = baseHorizonY + (height * 0.76 - baseHorizonY) * skyExpandBlend;
+            shorelineY = baseShorelineY + (height * 0.86 - baseShorelineY) * skyExpandBlend;
+            alexis.x = width * (0.36 + 0.12 * skyExpandBlend);
+            alexis.y = shorelineY + (height - shorelineY) * 0.48;
+            player.isHugging = true;
         }
 
         // Distance entre Clara et la place assise juste à droite d'Alexis sur le sable
@@ -4226,6 +4525,18 @@ function launchFullscreenMidnightSwim(item) {
                     life: 1.25
                 });
             }
+
+            // Déclenchement de la suite : uniquement APRÈS qu'elle est allée jouer dans l'eau,
+            // qu'elle est revenue faire un câlin, et après une pause de quelques bonnes secondes (4.5s)
+            if (hasPlayedInWater && !stargazePhase) {
+                postSwimHugTimer += dt;
+                if (postSwimHugTimer >= 4.5) {
+                    stargazePhase = true;
+                    stargazeIdleTimer = 0;
+                    // N'affiche aucun texte tout de suite : on attend 10 secondes si elle ne comprend pas toute seule
+                    fsHint.style.opacity = '0';
+                }
+            }
         } else {
             player.hugBlend += (0 - player.hugBlend) * Math.min(1, dt * 9);
             player.vx += (desiredVx - player.vx) * Math.min(1, dt * 10);
@@ -4233,6 +4544,32 @@ function launchFullscreenMidnightSwim(item) {
 
             player.x = Math.max(26, Math.min(width - 26, player.x + player.vx * dt));
             player.y = Math.max(horizonY + 26, Math.min(height - 30, player.y + player.vy * dt));
+        }
+
+        // Si l'écran est tourné vers le ciel et qu'elle n'a toujours pas touché les étoiles après 10 secondes,
+        // affiche uniquement « touche les étoiles la haut » en plus petit
+        if (stargazePhase && constellationProgress === 0 && !finaleShown) {
+            stargazeIdleTimer += dt;
+            if (stargazeIdleTimer >= 10) {
+                fsHint.textContent = 'touche les étoiles la haut';
+                fsHint.style.fontSize = '0.75rem';
+                fsHint.style.opacity = '1';
+            }
+        }
+
+        // Dès qu'elle a terminé ses quelques pressions, trace automatiquement le vrai cœur bien fait,
+        // le laisse briller sans pop-up (avec la croix en haut à droite), puis ramène directement au menu 10s après
+        if (stargazePhase && constellationProgress >= heartStarAngles.length && !finaleShown) {
+            heartRevealBlend = Math.min(1, heartRevealBlend + dt * 0.9);
+            if (heartRevealBlend >= 1) {
+                constellationCompletedTimer += dt;
+                if (constellationCompletedTimer >= 10) {
+                    finaleShown = true;
+                    closeFullscreenGame();
+                    closeModal();
+                    return;
+                }
+            }
         }
 
         const speed = Math.hypot(player.vx, player.vy);
@@ -4255,6 +4592,10 @@ function launchFullscreenMidnightSwim(item) {
 
         // 2. Aura et traînée de phytoplancton bleu turquoise (légèrement adoucies)
         if (inWater) {
+            waterPlayTime += dt;
+            if (waterPlayTime >= 1.8 && !hasPlayedInWater) {
+                hasPlayedInWater = true;
+            }
             if (!hasUnlockedSouvenir) {
                 unlockMidnightSouvenir();
                 fsHint.style.opacity = '0';
@@ -4288,7 +4629,7 @@ function launchFullscreenMidnightSwim(item) {
         // 3. Étoiles filantes périodiques
         nextShootingStarTimer -= dt;
         if (nextShootingStarTimer <= 0) {
-            nextShootingStarTimer = 4.5 + Math.random() * 5.5;
+            nextShootingStarTimer = (stargazePhase ? 2.2 : 4.5) + Math.random() * (stargazePhase ? 2.5 : 5.5);
             const startX = width * (0.15 + Math.random() * 0.7);
             const startY = horizonY * (0.08 + Math.random() * 0.45);
             const dir = Math.random() < 0.5 ? 1 : -1;
@@ -4345,6 +4686,7 @@ function launchFullscreenMidnightSwim(item) {
         cancelAnimationFrame(animId);
         if (fsStatsEl) fsStatsEl.style.display = '';
         if (fsTimer) fsTimer.style.display = '';
+        fsHint.style.fontSize = '';
         fsHint.style.pointerEvents = '';
         fsHint.style.cursor = '';
         fsHint.onclick = null;
@@ -4760,6 +5102,635 @@ function initHangingBaublesPhysics() {
     }
 
     requestAnimationFrame(stepPhysics);
+}
+
+/* =========================================================================
+   ROUE DE LA CHANCE HAUTE FIDÉLITÉ (JOUR 9)
+   - Esthétique éditoriale sapin / ivoire / bordeaux / or brossé dans la DA du site
+   - Segments vides pour l'instant (prêts à accueillir du texte plus tard)
+   - Aléatoire cryptographique réel (window.crypto.getRandomValues)
+   - Lancement au doigt (glisser-lancer directement sur la roue) ou via le bouton
+   - Physique réaliste des clous dorés qui percutent le clapet supérieur avec rebond
+     et synthèse audio Web Audio API (cliquetis horloger/bois/laiton)
+   ========================================================================= */
+let activeWheelCleanup = null;
+
+function closeFullscreenLuckyWheel() {
+    if (activeWheelCleanup) {
+        activeWheelCleanup();
+        activeWheelCleanup = null;
+    }
+    if (fsWheelOverlay) {
+        fsWheelOverlay.classList.remove('active');
+        fsWheelOverlay.setAttribute('aria-hidden', 'true');
+    }
+}
+
+if (fsWheelCloseBtn) {
+    fsWheelCloseBtn.addEventListener('click', closeFullscreenLuckyWheel);
+}
+
+function getCryptoRandomFloat() {
+    if (window.crypto && window.crypto.getRandomValues) {
+        const arr = new Uint32Array(1);
+        window.crypto.getRandomValues(arr);
+        return arr[0] / (0xFFFFFFFF + 1);
+    }
+    return Math.random();
+}
+
+function launchFullscreenLuckyWheel(item) {
+    stopActiveGame();
+    if (activeWheelCleanup) {
+        activeWheelCleanup();
+        activeWheelCleanup = null;
+    }
+
+    fsWheelOverlay.classList.add('active');
+    fsWheelOverlay.setAttribute('aria-hidden', 'false');
+
+    const ctx = wheelCanvas.getContext('2d');
+    const segments = Array.isArray(item.segments) && item.segments.length > 0
+        ? item.segments
+        : [
+            { label: '', color: '#1E352B', textColor: '#FAF7F2' },
+            { label: '', color: '#FAF7F2', textColor: '#1A211E' },
+            { label: '', color: '#9E2A2B', textColor: '#FAF7F2' },
+            { label: '', color: '#F2EAE0', textColor: '#1A211E' },
+            { label: '', color: '#1E352B', textColor: '#FAF7F2' },
+            { label: '', color: '#FAF7F2', textColor: '#1A211E' },
+            { label: '', color: '#9E2A2B', textColor: '#FAF7F2' },
+            { label: '', color: '#F2EAE0', textColor: '#1A211E' }
+        ];
+
+    const numSegments = segments.length;
+    const sliceAngle = (Math.PI * 2) / numSegments;
+    const numPegs = numSegments * 2; // 16 clous dorés autour de la jante
+    const pegStepAngle = (Math.PI * 2) / numPegs;
+
+    let size = 320;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+    function resizeWheelCanvas() {
+        const rect = wheelCanvas.getBoundingClientRect();
+        size = Math.max(260, Math.round(Math.min(rect.width || 320, rect.height || 320)));
+        wheelCanvas.width = size * dpr;
+        wheelCanvas.height = size * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resizeWheelCanvas();
+    window.addEventListener('resize', resizeWheelCanvas);
+
+    // État physique de la roue et du clapet supérieur
+    let wheelAngle = getCryptoRandomFloat() * Math.PI * 2;
+    let wheelOmega = 0; // Vitesse angulaire (rad/s)
+    let isSpinning = false;
+    let isDragging = false;
+    let dragLastPointerAngle = 0;
+    let dragLastTime = 0;
+    let smoothedDragOmega = 0;
+
+    // Physique du clapet (pointeur en haut à 12h = -PI/2)
+    let clapperAngle = 0;
+    let clapperOmega = 0;
+    let lastPegIndex = Math.floor(((wheelAngle + Math.PI / 2) % (Math.PI * 2) + Math.PI * 2) / pegStepAngle);
+
+    // Illumination du quartier gagnant et particules dorées à l'arrêt
+    let winningSegmentIndex = -1;
+    let winGlowPulse = 0;
+    const sparkles = [];
+
+    wheelSpinBtn.disabled = false;
+    wheelHint.textContent = 'Lance la roue avec ton doigt ou appuie sur le bouton';
+
+    // Synthèse sonore Web Audio API : cliquetis horloger / bois & laiton à chaque clou + carillon doux à l'arrêt
+    let audioCtx = null;
+
+    function ensureWheelAudio() {
+        try {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return null;
+                audioCtx = new AudioContextClass();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        } catch {
+            return null;
+        }
+    }
+
+    function playPegClickSound(speedAbs) {
+        const ac = ensureWheelAudio();
+        if (!ac) return;
+        try {
+            const now = ac.currentTime;
+            const normSpeed = Math.min(1, speedAbs / 18);
+
+            // 1. Impact boisé/mat du clapet (triangle court)
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = 'triangle';
+            const baseFreq = 520 + normSpeed * 340 + (Math.random() - 0.5) * 25;
+            osc.frequency.setValueAtTime(baseFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(140, now + 0.028);
+
+            const vol = 0.04 + normSpeed * 0.085;
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.032);
+
+            osc.connect(gain);
+            gain.connect(ac.destination);
+            osc.start(now);
+            osc.stop(now + 0.035);
+
+            // 2. Légère résonance métallique dorée (clou en laiton)
+            const ping = ac.createOscillator();
+            const pingGain = ac.createGain();
+            ping.type = 'sine';
+            ping.frequency.setValueAtTime(2150 + normSpeed * 400, now);
+            pingGain.gain.setValueAtTime(vol * 0.22, now);
+            pingGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.022);
+
+            ping.connect(pingGain);
+            pingGain.connect(ac.destination);
+            ping.start(now);
+            ping.stop(now + 0.025);
+        } catch {
+            // Ignore si l'audio est bloqué
+        }
+    }
+
+    function playWheelStopChime() {
+        const ac = ensureWheelAudio();
+        if (!ac) return;
+        try {
+            const notes = [523.25, 659.25, 783.99, 1046.5];
+            notes.forEach((freq, idx) => {
+                const start = ac.currentTime + idx * 0.075;
+                const osc = ac.createOscillator();
+                const gain = ac.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, start);
+
+                gain.gain.setValueAtTime(0.001, start);
+                gain.gain.linearRampToValueAtTime(0.075, start + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0008, start + 0.75);
+
+                osc.connect(gain);
+                gain.connect(ac.destination);
+                osc.start(start);
+                osc.stop(start + 0.8);
+            });
+        } catch {
+            // Ignore
+        }
+    }
+
+    function spawnWinSparkles(cx, cy, r) {
+        const palette = ['#C59B5F', '#FAF0D4', '#9E2A2B', '#1E352B', '#E8D5B5'];
+        for (let i = 0; i < 34; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.4;
+            const dist = r * (0.25 + Math.random() * 0.65);
+            const spd = 25 + Math.random() * 75;
+            sparkles.push({
+                x: cx + Math.cos(angle) * dist,
+                y: cy + Math.sin(angle) * dist,
+                vx: Math.cos(angle) * spd + (Math.random() - 0.5) * 35,
+                vy: Math.sin(angle) * spd - 20,
+                size: 2.2 + Math.random() * 3.2,
+                color: palette[Math.floor(Math.random() * palette.length)],
+                life: 0.85 + Math.random() * 0.5
+            });
+        }
+    }
+
+    // Lance la roue avec une impulsion véritablement aléatoire (cryptographique)
+    function triggerRandomSpin(direction = 1, baseImpulse = 0) {
+        ensureWheelAudio();
+        winningSegmentIndex = -1;
+        winGlowPulse = 0;
+
+        // Vitesse initiale aléatoire entre 15.5 et 25.5 rad/s + bruit cryptographique fin
+        const r1 = getCryptoRandomFloat();
+        const r2 = getCryptoRandomFloat();
+        const randomOmega = 16.0 + r1 * 9.5 + r2 * 2.2 + Math.min(6, Math.abs(baseImpulse) * 0.25);
+
+        wheelOmega = (direction >= 0 ? 1 : -1) * randomOmega;
+        isSpinning = true;
+        wheelSpinBtn.disabled = true;
+        wheelHint.textContent = 'La roue tourne… ✨';
+    }
+
+    wheelSpinBtn.onclick = () => {
+        if (isSpinning) return;
+        triggerRandomSpin(1, 0);
+    };
+
+    // Interaction directe au doigt / souris sur la roue (tourner manuellement et lancer d'un coup de doigt)
+    function getPointerAngleFromCenter(clientX, clientY) {
+        const rect = wheelCanvas.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        return Math.atan2(clientY - cy, clientX - cx);
+    }
+
+    const onPointerDown = (clientX, clientY) => {
+        if (isSpinning && Math.abs(wheelOmega) > 3.5) return;
+        ensureWheelAudio();
+        isDragging = true;
+        isSpinning = false;
+        winningSegmentIndex = -1;
+        wheelOmega = 0;
+        smoothedDragOmega = 0;
+        dragLastPointerAngle = getPointerAngleFromCenter(clientX, clientY);
+        dragLastTime = performance.now();
+    };
+
+    const onPointerMove = (clientX, clientY) => {
+        if (!isDragging) return;
+        const now = performance.now();
+        const dt = Math.max(0.004, (now - dragLastTime) / 1000);
+        const curAngle = getPointerAngleFromCenter(clientX, clientY);
+        let delta = curAngle - dragLastPointerAngle;
+        while (delta > Math.PI) delta -= Math.PI * 2;
+        while (delta < -Math.PI) delta += Math.PI * 2;
+
+        wheelAngle += delta;
+        const instOmega = delta / dt;
+        smoothedDragOmega = smoothedDragOmega * 0.6 + instOmega * 0.4;
+
+        dragLastPointerAngle = curAngle;
+        dragLastTime = now;
+    };
+
+    const onPointerUp = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        if (Math.abs(smoothedDragOmega) > 1.3) {
+            const dir = smoothedDragOmega >= 0 ? 1 : -1;
+            triggerRandomSpin(dir, smoothedDragOmega);
+        }
+    };
+
+    const onTouchStart = (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onTouchMove = (e) => {
+        if (!isDragging || !e.touches || e.touches.length === 0) return;
+        onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onTouchEnd = () => onPointerUp();
+
+    const onMouseDown = (e) => onPointerDown(e.clientX, e.clientY);
+    const onMouseMove = (e) => onPointerMove(e.clientX, e.clientY);
+    const onMouseUp = () => onPointerUp();
+
+    wheelCanvas.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    wheelCanvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    function getSegmentUnderPointer(angle) {
+        // Pointeur en haut à -PI/2
+        const pointerAngle = -Math.PI / 2;
+        const rel = ((pointerAngle - angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        return Math.floor(rel / sliceAngle) % numSegments;
+    }
+
+    function drawWheelScene() {
+        ctx.clearRect(0, 0, size, size);
+
+        const cx = size / 2;
+        const cy = size / 2 + 8;
+        const outerRadius = size * 0.43;
+        const rimInnerRadius = outerRadius - 13;
+        const hubRadius = outerRadius * 0.19;
+
+        // 1. Ombre portée douce sous la roue
+        ctx.save();
+        ctx.fillStyle = 'rgba(26, 33, 30, 0.16)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 10, outerRadius * 0.96, outerRadius * 0.95, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 2. Couronne extérieure en Or Brossé (jante de la roue)
+        ctx.save();
+        const rimGrad = ctx.createLinearGradient(cx - outerRadius, cy - outerRadius, cx + outerRadius, cy + outerRadius);
+        rimGrad.addColorStop(0.0, '#A87D3E');
+        rimGrad.addColorStop(0.22, '#E5CA93');
+        rimGrad.addColorStop(0.42, '#FFF3D6');
+        rimGrad.addColorStop(0.58, '#C59B5F');
+        rimGrad.addColorStop(0.78, '#936A30');
+        rimGrad.addColorStop(1.0, '#DFC086');
+
+        ctx.fillStyle = rimGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(110, 74, 24, 0.55)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Filet intérieur de la couronne dorée
+        ctx.strokeStyle = '#1E352B';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rimInnerRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. Quartiers (segments) de la roue en rotation
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(wheelAngle);
+
+        for (let i = 0; i < numSegments; i++) {
+            const startA = i * sliceAngle;
+            const endA = startA + sliceAngle;
+            const midA = startA + sliceAngle / 2;
+            const seg = segments[i];
+
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, rimInnerRadius - 1, startA, endA);
+            ctx.closePath();
+
+            ctx.fillStyle = seg.color;
+            ctx.fill();
+
+            // Légère patine radiale pour donner du relief à chaque quartier
+            const sliceGrad = ctx.createRadialGradient(0, 0, hubRadius, 0, 0, rimInnerRadius);
+            sliceGrad.addColorStop(0, 'rgba(0, 0, 0, 0.08)');
+            sliceGrad.addColorStop(0.65, 'rgba(255, 255, 255, 0)');
+            sliceGrad.addColorStop(1, 'rgba(0, 0, 0, 0.12)');
+            ctx.fillStyle = sliceGrad;
+            ctx.fill();
+
+            // Si c'est le quartier gagnant à l'arrêt : douce lueur dorée
+            if (i === winningSegmentIndex) {
+                const highlightAlpha = 0.22 + 0.12 * Math.sin(winGlowPulse * 5);
+                ctx.fillStyle = `rgba(255, 232, 175, ${highlightAlpha})`;
+                ctx.fill();
+            }
+
+            // Filet doré séparateur entre les quartiers
+            ctx.strokeStyle = '#C59B5F';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(startA) * (rimInnerRadius - 1), Math.sin(startA) * (rimInnerRadius - 1));
+            ctx.stroke();
+
+            // Fin liseré d'arche dorée et petite étoile filigranée dans chaque quartier
+            ctx.save();
+            ctx.rotate(midA);
+            const isDarkSlice = seg.color === '#1E352B' || seg.color === '#9E2A2B';
+            ctx.fillStyle = isDarkSlice ? 'rgba(232, 213, 181, 0.72)' : 'rgba(197, 155, 95, 0.78)';
+            ctx.font = '10px Georgia, serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✦', rimInnerRadius - 18, 0);
+
+            if (seg.label) {
+                ctx.fillStyle = seg.textColor || (isDarkSlice ? '#FAF7F2' : '#1A211E');
+                ctx.font = '600 13px Cormorant Garamond, Georgia, serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(seg.label, rimInnerRadius - 30, 0);
+            }
+            ctx.restore();
+        }
+
+        // Filet circulaire intérieur gravé près du bord des quartiers
+        ctx.strokeStyle = 'rgba(197, 155, 95, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, rimInnerRadius - 8, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 4. Clous en laiton doré (16 clous sur la jante qui percutent le clapet)
+        const pegRadiusDist = outerRadius - 6.5;
+        for (let p = 0; p < numPegs; p++) {
+            const pa = p * pegStepAngle;
+            const px = Math.cos(pa) * pegRadiusDist;
+            const py = Math.sin(pa) * pegRadiusDist;
+
+            ctx.fillStyle = 'rgba(40, 26, 10, 0.45)';
+            ctx.beginPath();
+            ctx.arc(px + 0.8, py + 1.2, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            const pegGrad = ctx.createRadialGradient(px - 1, py - 1, 0.5, px, py, 3.5);
+            pegGrad.addColorStop(0, '#FFFDF5');
+            pegGrad.addColorStop(0.55, '#E5C687');
+            pegGrad.addColorStop(1, '#8C6226');
+            ctx.fillStyle = pegGrad;
+            ctx.beginPath();
+            ctx.arc(px, py, 3.3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+
+        // 5. Médaillon central (Sceau bordeaux & couronne d'or)
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        ctx.fillStyle = 'rgba(20, 25, 22, 0.28)';
+        ctx.beginPath();
+        ctx.arc(0, 3, hubRadius + 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        const hubGoldGrad = ctx.createLinearGradient(-hubRadius, -hubRadius, hubRadius, hubRadius);
+        hubGoldGrad.addColorStop(0, '#E8CF9C');
+        hubGoldGrad.addColorStop(0.5, '#FFF2D2');
+        hubGoldGrad.addColorStop(1, '#9E7336');
+        ctx.fillStyle = hubGoldGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, hubRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        const sealGrad = ctx.createRadialGradient(-4, -4, 2, 0, 0, hubRadius - 4.5);
+        sealGrad.addColorStop(0, '#B53839');
+        sealGrad.addColorStop(0.7, '#9E2A2B');
+        sealGrad.addColorStop(1, '#6E1B1C');
+        ctx.fillStyle = sealGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, hubRadius - 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#E8D5B5';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, hubRadius - 7.5, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Étoile centrale dorée qui tourne doucement avec la roue
+        ctx.rotate(wheelAngle * 0.5);
+        ctx.fillStyle = '#FAF0D4';
+        ctx.beginPath();
+        for (let k = 0; k < 8; k++) {
+            const a = (k * Math.PI) / 4;
+            const r = k % 2 === 0 ? hubRadius * 0.42 : hubRadius * 0.16;
+            if (k === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+            else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // 6. Clapet supérieur (Pointeur à 12h avec rebond physique sur les clous)
+        ctx.save();
+        const pivotX = cx;
+        const pivotY = cy - outerRadius - 6;
+        ctx.translate(pivotX, pivotY);
+        ctx.rotate(clapperAngle);
+
+        // Ombre du clapet
+        ctx.fillStyle = 'rgba(26, 33, 30, 0.25)';
+        ctx.beginPath();
+        ctx.moveTo(-9, -2);
+        ctx.lineTo(9, -2);
+        ctx.lineTo(0, 24);
+        ctx.closePath();
+        ctx.fill();
+
+        // Corps du clapet (bordeaux & bordure or)
+        ctx.fillStyle = '#9E2A2B';
+        ctx.strokeStyle = '#FAF0D4';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(-8.5, -4);
+        ctx.lineTo(8.5, -4);
+        ctx.lineTo(0, 22);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Rivet supérieur en or
+        ctx.fillStyle = '#C59B5F';
+        ctx.beginPath();
+        ctx.arc(0, -3, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFF3D6';
+        ctx.beginPath();
+        ctx.arc(-1.2, -4.2, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 7. Particules d'or et d'étoiles à l'arrêt
+        for (let i = sparkles.length - 1; i >= 0; i--) {
+            const sp = sparkles[i];
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, Math.min(1, sp.life));
+            ctx.fillStyle = sp.color;
+            ctx.beginPath();
+            ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    let animId = null;
+    let lastFrameTime = performance.now();
+
+    function stepWheel(now) {
+        const dt = Math.min(0.04, Math.max(0.001, (now - lastFrameTime) / 1000));
+        lastFrameTime = now;
+
+        if (isSpinning && !isDragging) {
+            wheelAngle += wheelOmega * dt;
+
+            // Frottement fluide et progressif (longue décélération pleine de suspense)
+            const speed = Math.abs(wheelOmega);
+            const dragCoeff = speed > 4 ? 0.52 : (speed > 1.2 ? 0.68 : 0.95);
+            wheelOmega *= Math.exp(-dragCoeff * dt);
+
+            // Ralentissement supplémentaire dû à la résistance mécanique des clous à basse vitesse
+            if (speed < 0.22) {
+                wheelOmega = 0;
+                isSpinning = false;
+                wheelSpinBtn.disabled = false;
+                winningSegmentIndex = getSegmentUnderPointer(wheelAngle);
+                wheelHint.textContent = '✨ Relance la roue quand tu veux !';
+                playWheelStopChime();
+                spawnWinSparkles(size / 2, size / 2 + 8, size * 0.43);
+
+                if (!gamesWon.includes(item.day)) {
+                    gamesWon.push(item.day);
+                    localStorage.setItem(GAMES_WON_KEY, JSON.stringify(gamesWon));
+                }
+            }
+        }
+
+        // Détection du passage des clous sous le clapet à 12h (-PI/2)
+        const normalizedPegPos = (((-Math.PI / 2 - wheelAngle) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        const currentPegIndex = Math.floor(normalizedPegPos / pegStepAngle);
+
+        if (currentPegIndex !== lastPegIndex) {
+            const currentSpeed = isDragging ? Math.abs(smoothedDragOmega) : Math.abs(wheelOmega);
+            const spinDir = (isDragging ? smoothedDragOmega : wheelOmega) >= 0 ? 1 : -1;
+            const kickStrength = Math.min(0.62, 0.16 + (currentSpeed / 22) * 0.46);
+
+            // Le clapet est poussé dans le sens de rotation de la roue
+            clapperAngle = -spinDir * kickStrength;
+            clapperOmega = -spinDir * currentSpeed * 0.35;
+
+            playPegClickSound(currentSpeed);
+            if (navigator.vibrate && currentSpeed > 0.5) {
+                navigator.vibrate(5);
+            }
+            lastPegIndex = currentPegIndex;
+        }
+
+        // Ressort de rappel du clapet supérieur
+        const springK = 260;
+        const damping = 18;
+        const clapperAcc = -springK * clapperAngle - damping * clapperOmega;
+        clapperOmega += clapperAcc * dt;
+        clapperAngle += clapperOmega * dt;
+
+        if (winningSegmentIndex >= 0) {
+            winGlowPulse += dt;
+        }
+
+        for (let i = sparkles.length - 1; i >= 0; i--) {
+            const sp = sparkles[i];
+            sp.x += sp.vx * dt;
+            sp.y += sp.vy * dt;
+            sp.vy += 90 * dt;
+            sp.life -= dt * 0.9;
+            if (sp.life <= 0) {
+                sparkles.splice(i, 1);
+            }
+        }
+
+        drawWheelScene();
+        animId = requestAnimationFrame(stepWheel);
+    }
+
+    animId = requestAnimationFrame(stepWheel);
+
+    activeWheelCleanup = () => {
+        cancelAnimationFrame(animId);
+        if (audioCtx && audioCtx.state !== 'closed') {
+            audioCtx.close().catch(() => {});
+        }
+        window.removeEventListener('resize', resizeWheelCanvas);
+        wheelCanvas.removeEventListener('touchstart', onTouchStart);
+        window.removeEventListener('touchmove', onTouchMove);
+        window.removeEventListener('touchend', onTouchEnd);
+        wheelCanvas.removeEventListener('mousedown', onMouseDown);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+    };
 }
 
 initGate();

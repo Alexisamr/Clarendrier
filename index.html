@@ -307,11 +307,8 @@
 
     <!-- Conteneur Plein Écran pour les Coupons / Tickets à Découper -->
     <div class="fs-coupon-overlay" id="fs-coupon-overlay" aria-hidden="true">
-        <div class="fs-quiz-topbar">
-            <div class="fs-quiz-progress">
-                <span class="fs-quiz-step-label" id="fs-coupon-top-label">Bon Cadeau à Découper</span>
-            </div>
-            <button class="fs-quiz-close-btn" id="fs-coupon-close-btn" aria-label="Fermer">&times;</button>
+        <div class="fs-coupon-topbar">
+            <button class="fs-quiz-close-btn" id="fs-coupon-close-btn" aria-label="Quitter">&times;</button>
         </div>
 
         <div class="fs-coupon-stage">
@@ -320,12 +317,7 @@
             <div class="coupon-ticket" id="coupon-ticket">
                 <!-- Partie Haute : Talon à détacher -->
                 <div class="coupon-stub" id="coupon-stub">
-                    <div class="coupon-stub-meta">
-                        <span id="coupon-serial-left">N° 002</span>
-                        <span>ÉDITION PRIVÉE</span>
-                        <span id="coupon-serial-right">DÉC.</span>
-                    </div>
-                    <div class="coupon-stub-title">TALON À DÉTACHER</div>
+                    <div class="coupon-stub-title">Bon Cadeau</div>
                     <div class="coupon-stub-sub">Découpe suivant les pointillés</div>
                 </div>
 
@@ -361,38 +353,21 @@
                         </div>
                     </div>
 
-                    <!-- Contenu révélé du Bon -->
+                    <!-- Contenu révélé du Bon : uniquement l'essentiel -->
                     <div class="coupon-revealed-content" id="coupon-revealed-content">
                         <div class="coupon-crest" aria-hidden="true">
-                            <svg width="96" height="32" viewBox="0 0 96 32" fill="none">
-                                <line x1="8" y1="16" x2="34" y2="16" stroke="#C59B5F" stroke-width="0.9" opacity="0.6"/>
-                                <line x1="62" y1="16" x2="88" y2="16" stroke="#C59B5F" stroke-width="0.9" opacity="0.6"/>
-                                <path d="M43 15C38 10 32 12 35 17C37 19 41 18 43 15Z" fill="#1E352B"/>
-                                <path d="M53 15C58 10 64 12 61 17C59 19 55 18 53 15Z" fill="#1E352B"/>
-                                <circle cx="46" cy="13" r="2.3" fill="#9E2A2B"/>
-                                <circle cx="50" cy="13" r="2.3" fill="#9E2A2B"/>
-                                <circle cx="48" cy="10.2" r="2.1" fill="#B83B3B"/>
-                                <path d="M48 18L49.2 22L53.2 23.2L49.2 24.4L48 28.4L46.8 24.4L42.8 23.2L46.8 22L48 18Z" fill="#C59B5F"/>
+                            <svg width="84" height="28" viewBox="0 0 96 32" fill="none">
+                                <line x1="12" y1="16" x2="36" y2="16" stroke="#C59B5F" stroke-width="0.9" opacity="0.55"/>
+                                <line x1="60" y1="16" x2="84" y2="16" stroke="#C59B5F" stroke-width="0.9" opacity="0.55"/>
+                                <path d="M48 8L50 14L56 16L50 18L48 24L46 18L40 16L46 14L48 8Z" fill="#C59B5F"/>
                             </svg>
                         </div>
 
-                        <span class="coupon-badge" id="coupon-badge">BON CADEAU EXCLUSIF</span>
                         <h2 class="coupon-main-title" id="coupon-main-title"></h2>
                         <p class="coupon-clause" id="coupon-clause" hidden></p>
-
-                        <div class="coupon-footer-row">
-                            <div class="coupon-stamp" id="coupon-stamp">VALABLE À VIE ❤️</div>
-                            <div class="coupon-barcode" aria-hidden="true">
-                                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
-
-            <button type="button" class="btn-sober coupon-done-btn" id="coupon-done-btn" hidden>
-                Garder précieusement ce bon ❤️
-            </button>
         </div>
     </div>
 
@@ -441,17 +416,11 @@
 
     <!-- Conteneur Plein Écran pour la Roue de la Chance (Jour 9) -->
     <div class="fs-wheel-overlay" id="fs-wheel-overlay" aria-hidden="true">
-        <div class="fs-quiz-topbar">
-            <div class="fs-quiz-progress">
-                <span class="fs-quiz-step-label" id="fs-wheel-top-label">Roue de la Chance</span>
-            </div>
-            <button class="fs-quiz-close-btn" id="fs-wheel-close-btn" aria-label="Fermer">&times;</button>
-        </div>
-
         <div class="fs-wheel-stage">
             <div class="wheel-card-shell">
+                <button class="wheel-close-btn" id="fs-wheel-close-btn" aria-label="Fermer">&times;</button>
+
                 <div class="wheel-header">
-                    <span class="wheel-kicker">9 Décembre • Tirage au Sort</span>
                     <h2 class="wheel-title">La Roue de la Chance</h2>
                 </div>
 
@@ -460,7 +429,6 @@
                 </div>
 
                 <div class="wheel-controls">
-                    <p class="wheel-hint" id="wheel-hint">Lance la roue avec ton doigt ou appuie sur le bouton</p>
                     <button type="button" class="btn-sober wheel-spin-btn" id="wheel-spin-btn">
                         Tourner la roue ✨
                     </button>

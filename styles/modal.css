@@ -1,0 +1,575 @@
+/* ============================================================================
+   TIROIR MODAL DU JOUR, CARTES DE LANCEMENT & CARNET SECRET
+   ============================================================================ */
+
+/* --- TIROIR MODAL (Bottom Sheet / Dialog) --- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(20, 25, 23, 0.48);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: var(--z-modal);
+}
+
+@media (min-width: 640px) {
+    .modal-overlay {
+        align-items: center;
+        padding: 24px;
+    }
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-sheet {
+    background-color: var(--bg-color);
+    background-image: radial-gradient(circle at top, rgba(232, 213, 181, 0.28) 0%, transparent 65%);
+    width: 100%;
+    max-width: 460px;
+    max-height: min(86dvh, calc(100dvh - env(safe-area-inset-top, 16px) - 24px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    border-top: 1px solid var(--border-color);
+    padding: 16px 22px calc(env(safe-area-inset-bottom, 20px) + 22px);
+    position: relative;
+    box-shadow: var(--shadow-sheet);
+    transform: translateY(100%);
+    transition: transform 0.32s var(--ease-out-smooth);
+}
+
+@media (min-width: 640px) {
+    .modal-sheet {
+        max-height: 85dvh;
+        border-radius: 26px;
+        border: 1px solid var(--border-color);
+        padding: 26px 30px 30px;
+        transform: translateY(24px) scale(0.97);
+    }
+}
+
+.modal-overlay.active .modal-sheet {
+    transform: translateY(0) scale(1);
+}
+
+.modal-handle {
+    width: 40px;
+    height: 4px;
+    background-color: var(--border-color);
+    border-radius: 2px;
+    margin: 0 auto 14px;
+    flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .modal-handle {
+        display: none;
+    }
+}
+
+.modal-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(26, 33, 30, 0.07);
+    border: 1px solid rgba(197, 155, 95, 0.25);
+    font-size: 1.4rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.modal-close:hover {
+    background: rgba(26, 33, 30, 0.12);
+    color: var(--text-primary);
+}
+
+.modal-close:active {
+    transform: scale(0.92);
+}
+
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.modal-day-header {
+    text-align: center;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.modal-day {
+    display: inline-block;
+    font-family: var(--font-serif);
+    font-size: 1.7rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    color: var(--gold-accent);
+    flex-shrink: 0;
+}
+
+.modal-divider span {
+    width: 52px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-accent), transparent);
+    opacity: 0.65;
+}
+
+.modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    padding: 2px 4px 10px;
+    font-size: 0.96rem;
+    line-height: 1.68;
+    color: var(--text-primary);
+    font-weight: 400;
+    text-align: center;
+}
+
+/* --- PETITE BOX D'APERÇU DU JEU DANS LA MODALE (JOUR 4) --- */
+.game-launch-box {
+    margin-top: 18px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid rgba(197, 155, 95, 0.35);
+    background: linear-gradient(180deg, #D97F6C 0%, #F1B980 55%, #E5D2B8 55%, #D5BC9D 100%);
+    padding: 24px 20px;
+    color: var(--white);
+    box-shadow: 0 14px 30px -6px rgba(28, 27, 25, 0.16);
+    transition: transform 0.18s var(--ease-out-expo), box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+    .game-launch-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px -6px rgba(28, 27, 25, 0.22);
+    }
+}
+
+.game-launch-box:active {
+    transform: scale(0.97);
+}
+
+.game-launch-sun {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #FFFDF7 0%, #FFE099 70%, rgba(255,224,153,0) 100%);
+    margin: 0 auto 14px;
+    box-shadow: 0 0 28px rgba(255, 240, 200, 0.9);
+}
+
+.game-launch-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    background: rgba(26, 33, 30, 0.52);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 16px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.game-launch-tag {
+    display: inline-block;
+    font-size: var(--text-kicker);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #FFE5B4;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.game-launch-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-title-md);
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 8px;
+}
+
+.game-launch-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--bg-color);
+    color: var(--accent-color);
+    padding: 9px 18px;
+    border-radius: var(--radius-pill);
+    margin-top: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* --- BOX D'APERÇU DU BAIN DE MINUIT (JOUR 8) --- */
+.midnight-launch-box {
+    margin-top: 18px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid rgba(0, 245, 212, 0.42);
+    background:
+        radial-gradient(circle at 50% 82%, rgba(0, 245, 212, 0.34) 0%, rgba(0, 194, 255, 0.14) 38%, transparent 72%),
+        linear-gradient(180deg, #030712 0%, #071226 48%, #092038 78%, #16181D 100%);
+    padding: 24px 20px;
+    color: var(--white);
+    box-shadow: 0 16px 34px -6px rgba(4, 15, 32, 0.45), 0 0 24px rgba(0, 245, 212, 0.14);
+    transition: transform 0.18s var(--ease-out-expo), box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+    .midnight-launch-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 20px 40px -6px rgba(4, 15, 32, 0.55), 0 0 30px rgba(0, 245, 212, 0.25);
+    }
+}
+
+.midnight-launch-box:active {
+    transform: scale(0.97);
+}
+
+.midnight-launch-glow {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #E0FFFA 0%, #00F5D4 45%, rgba(0, 210, 255, 0) 75%);
+    margin: 0 auto 14px;
+    box-shadow: 0 0 32px rgba(0, 245, 212, 0.85), 0 0 60px rgba(0, 194, 255, 0.45);
+}
+
+.midnight-launch-box .game-launch-tag {
+    color: #5CE1E6;
+}
+
+.midnight-launch-box .game-launch-cta {
+    background: linear-gradient(135deg, #00F5D4 0%, #38BDF8 100%);
+    color: #031525;
+}
+
+/* --- BOX D'APERÇU DU QUIZ DANS LA MODALE (JOUR 3) --- */
+.quiz-launch-box {
+    margin-top: 14px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    background: linear-gradient(155deg, #1E352B 0%, #274437 55%, #1A2E25 100%);
+    padding: 22px 20px;
+    color: var(--bg-color);
+    box-shadow: 0 14px 30px -8px rgba(30, 53, 43, 0.25);
+    transition: transform 0.18s var(--ease-out-expo), box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+    .quiz-launch-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px -8px rgba(30, 53, 43, 0.32);
+    }
+}
+
+.quiz-launch-box:active {
+    transform: scale(0.97);
+}
+
+.quiz-launch-content {
+    text-align: center;
+}
+
+.quiz-launch-tag {
+    display: inline-block;
+    font-size: var(--text-kicker);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--gold-light);
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.quiz-launch-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-title-md);
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 10px;
+}
+
+/* --- CARNET SECRET DES RÉPONSES DE CLARA (POUR ALEXIS) --- */
+.secret-answers-list {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 10px;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.secret-answer-item {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+}
+
+.secret-answer-q {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--christmas-red);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+
+.secret-answer-a {
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.secret-answer-date {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+/* --- BOX D'APERÇU DU COUPON À DÉCOUPER DANS LA MODALE (JOURS 2, 5, 10) --- */
+.coupon-launch-box {
+    margin-top: 14px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1px dashed var(--gold-accent);
+    background: linear-gradient(145deg, #9E2A2B 0%, #7E1F20 100%);
+    padding: 22px 20px;
+    color: var(--bg-color);
+    box-shadow: 0 14px 30px -8px rgba(158, 42, 43, 0.28);
+    transition: transform 0.18s var(--ease-out-expo), box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+    .coupon-launch-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px -8px rgba(158, 42, 43, 0.36);
+    }
+}
+
+.coupon-launch-box:active {
+    transform: scale(0.97);
+}
+
+/* Mini aperçu du ticket déjà découpé dans la modale */
+.coupon-mini-preview {
+    background: linear-gradient(165deg, #FFFFFF 0%, #FAF5EC 100%);
+    border: 1px solid var(--gold-accent);
+    border-radius: var(--radius-lg);
+    padding: 18px 16px;
+    margin-bottom: 14px;
+    position: relative;
+    box-shadow: 0 8px 22px -6px rgba(26, 33, 30, 0.08);
+}
+
+.coupon-mini-kicker {
+    display: block;
+    font-size: 0.64rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--christmas-red);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.coupon-mini-title {
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text-primary);
+}
+
+.coupon-mini-clause {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* --- MOT SECRET CLIQUABLE (JOUR 1 : REDIRECTION DIRECTE SPOTIFY) --- */
+.secret-music-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: linear-gradient(160deg, #FFFFFF 0%, #FAF4E8 100%);
+    border: 1px solid var(--gold-accent);
+    border-radius: 22px;
+    padding: 28px 22px;
+    margin-top: 8px;
+    box-shadow: 0 14px 32px -8px rgba(26, 33, 30, 0.12);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s var(--ease-out-expo), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+@media (hover: hover) {
+    .secret-music-note:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 38px -8px rgba(158, 42, 43, 0.18);
+    }
+}
+
+.secret-music-note:active {
+    transform: scale(0.97);
+}
+
+.secret-music-seal {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #B33637 0%, #8E2223 70%, #6E1819 100%);
+    border: 1.5px solid var(--gold-accent);
+    box-shadow: 0 6px 16px rgba(158, 42, 43, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    animation: secretSealPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes secretSealPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+}
+
+.secret-music-kicker {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--christmas-red);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.secret-music-title {
+    font-family: var(--font-serif);
+    font-size: var(--text-title-lg);
+    font-weight: 600;
+    font-style: italic;
+    color: var(--text-primary);
+    line-height: 1.25;
+}
+
+/* --- BOX D'APERÇU DE LA CARTE À GRATTER DANS LA MODALE (JOURS 6 & 7) --- */
+.scratch-launch-box {
+    margin-top: 14px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid var(--gold-accent);
+    background: linear-gradient(135deg, #C59B5F 0%, #E2C694 48%, #A87E43 100%);
+    padding: 22px 20px;
+    color: var(--text-primary);
+    box-shadow: 0 14px 30px -8px rgba(197, 155, 95, 0.38);
+    transition: transform 0.18s var(--ease-out-expo), box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+    .scratch-launch-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px -8px rgba(197, 155, 95, 0.48);
+    }
+}
+
+.scratch-launch-box:active {
+    transform: scale(0.97);
+}
+
+.scratch-launch-box .quiz-launch-tag {
+    color: var(--accent-color);
+    opacity: 0.85;
+}
+
+.scratch-launch-box .quiz-launch-title {
+    color: var(--text-primary);
+}
+
+/* --- BOX D'APERÇU DE LA ROUE DE LA CHANCE DANS LA MODALE (JOUR 9) --- */
+.wheel-launch-box {
+    margin-top: 10px;
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    border: 1.5px solid var(--gold-accent);
+    background: linear-gradient(145deg, #1E352B 0%, #15271F 55%, #233E32 100%);
+    padding: 24px 20px;
+    color: var(--bg-color);
+    box-shadow: 0 18px 36px -10px rgba(26, 33, 30, 0.32);
+    transition: transform 0.18s var(--ease-out-expo), box-shadow 0.18s ease;
+}
+
+.wheel-launch-box .game-launch-content {
+    background: transparent;
+    border: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 0;
+}
+
+@media (hover: hover) {
+    .wheel-launch-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 22px 42px -10px rgba(30, 53, 43, 0.44);
+    }
+}
+
+.wheel-launch-box:active {
+    transform: scale(0.97);
+}

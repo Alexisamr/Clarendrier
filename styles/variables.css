@@ -1,0 +1,188 @@
+/* ============================================================================
+   VARIABLES GLOBALES (COULEURS, POLICES, TAILLES, RAYONS, OMBRES, Z-INDEX)
+   & STYLES DE BASE (RESET, BODY, AMBIENT BG, BOUTONS, TOAST)
+   ============================================================================ */
+
+:root {
+    /* Palette principale */
+    --bg-color: #FAF7F2;
+    --bg-subtle: #F3EDE3;
+    --card-bg: #FFFFFF;
+    --card-opened-bg: #F4EFE6;
+    --text-primary: #1A211E;
+    --text-secondary: #787166;
+    --text-muted: #A39B8E;
+    --border-color: #E6DEC8;
+    --border-subtle: rgba(197, 155, 95, 0.22);
+
+    /* Couleurs d'accentuation (Sapin, Or, Rouge de Noël) */
+    --accent-color: #1E352B;
+    --accent-soft: #2C4A3E;
+    --accent-dark: #15271F;
+    --gold-accent: #C59B5F;
+    --gold-light: #E8D5B5;
+    --christmas-red: #9E2A2B;
+    --christmas-red-soft: rgba(158, 42, 43, 0.14);
+    --terracotta: #9E2A2B;
+    --white: #FFFFFF;
+
+    /* Typographie */
+    --font-serif: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* Tailles de texte récurrentes */
+    --text-xs: 0.62rem;
+    --text-kicker: 0.68rem;
+    --text-sm: 0.76rem;
+    --text-btn: 0.88rem;
+    --text-base: 0.95rem;
+    --text-title-md: 1.5rem;
+    --text-title-lg: 1.75rem;
+    --text-title-xl: 1.9rem;
+
+    /* Rayons de bordure récurrents */
+    --radius-sm: 12px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 20px;
+    --radius-2xl: 24px;
+    --radius-pill: 99px;
+
+    /* Largeurs de conteneurs */
+    --container-max-mobile: 520px;
+    --container-max-desktop: 680px;
+
+    /* Ombres */
+    --shadow-card: 0 4px 16px -4px rgba(26, 33, 30, 0.05), 0 2px 6px -1px rgba(26, 33, 30, 0.03);
+    --shadow-card-hover: 0 12px 28px -6px rgba(30, 53, 43, 0.12), 0 4px 10px -2px rgba(30, 53, 43, 0.06);
+    --shadow-sheet: 0 -12px 40px rgba(26, 33, 30, 0.16);
+    --shadow-btn: 0 6px 16px rgba(30, 53, 43, 0.22);
+
+    /* Courbes d'animation */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Échelle des Z-index */
+    --z-ambient: 0;
+    --z-app: 1;
+    --z-gate: 600;
+    --z-baubles: 650;
+    --z-modal: 700;
+    --z-toast: 750;
+    --z-fs-game: 800;
+    --z-fs-quiz: 820;
+    --z-fs-coupon: 830;
+    --z-fs-scratch: 840;
+    --z-fs-wheel: 845;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Halo lumineux d'ambiance en arrière-plan */
+.ambient-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: var(--z-ambient);
+    overflow: hidden;
+}
+
+.ambient-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.45;
+}
+
+.ambient-orb-1 {
+    width: 360px;
+    height: 360px;
+    top: -120px;
+    left: 50%;
+    transform: translateX(-60%);
+    background: radial-gradient(circle, rgba(232, 213, 181, 0.75) 0%, rgba(250, 247, 242, 0) 70%);
+}
+
+.ambient-orb-2 {
+    width: 420px;
+    height: 420px;
+    bottom: -140px;
+    right: -100px;
+    background: radial-gradient(circle, rgba(30, 53, 43, 0.08) 0%, rgba(250, 247, 242, 0) 70%);
+}
+
+.ambient-orb-3 {
+    width: 300px;
+    height: 300px;
+    top: 30%;
+    left: -120px;
+    background: radial-gradient(circle, rgba(158, 42, 43, 0.06) 0%, rgba(250, 247, 242, 0) 70%);
+}
+
+/* Bouton principal sobre (Sapin & Ivoire) */
+.btn-sober {
+    width: 100%;
+    padding: 14px 20px;
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: var(--text-btn);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: var(--shadow-btn);
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.btn-sober:hover {
+    background-color: var(--accent-soft);
+}
+
+.btn-sober:active {
+    transform: scale(0.98);
+}
+
+/* Notification Toast */
+.toast {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom, 20px) + 22px);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    padding: 11px 22px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    box-shadow: 0 10px 25px rgba(26, 33, 30, 0.22);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: var(--z-toast);
+    white-space: nowrap;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

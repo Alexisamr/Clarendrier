@@ -1,0 +1,42 @@
+/* ============================================================================
+   BOULES DE NOËL SUSPENDUES EN HAUT DE L'ÉCRAN
+   ============================================================================ */
+
+.hanging-deco-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: var(--z-baubles);
+    max-width: 780px;
+    margin: 0 auto;
+}
+
+.hanging-bauble {
+    position: absolute;
+    top: 0;
+    transform-origin: top center;
+    overflow: visible;
+}
+
+.hanging-left {
+    left: 10px;
+}
+
+.hanging-right {
+    right: 10px;
+}
+
+.bauble-pendulum,
+.bauble-bob {
+    will-change: transform;
+}
+
+@media (max-width: 420px) {
+    .hanging-bauble {
+        transform: scale(0.86);
+    }
+    .hanging-left { left: 4px; }
+    .hanging-right { right: 4px; }
+}

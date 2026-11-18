@@ -1,0 +1,268 @@
+/* ============================================================================
+   MODE PLEIN ÉCRAN DU QUIZ (JOUR 3 : SOUVENIRS D'ÉTÉ)
+   ============================================================================ */
+
+.fs-quiz-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    background-color: var(--bg-color);
+    background-image:
+        radial-gradient(circle at 50% 10%, rgba(232, 213, 181, 0.42) 0%, transparent 55%),
+        radial-gradient(circle at 85% 90%, rgba(158, 42, 43, 0.06) 0%, transparent 50%);
+    z-index: var(--z-fs-quiz);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fs-quiz-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.fs-quiz-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(env(safe-area-inset-top, 16px) + 12px) 20px 10px;
+    max-width: 560px;
+    width: 100%;
+    margin: 0 auto;
+    flex-shrink: 0;
+}
+
+.fs-quiz-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.fs-quiz-step-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.fs-quiz-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fs-quiz-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--border-color);
+    transition: background-color 0.25s ease, transform 0.25s ease;
+}
+
+.fs-quiz-dot.active {
+    background-color: var(--christmas-red);
+    transform: scale(1.2);
+}
+
+.fs-quiz-dot.done {
+    background-color: var(--accent-color);
+}
+
+.fs-quiz-close-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(26, 33, 30, 0.06);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+.fs-quiz-close-btn:active {
+    transform: scale(0.92);
+}
+
+.fs-quiz-scroll {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 20px calc(env(safe-area-inset-bottom, 24px) + 32px);
+}
+
+@media (min-height: 700px) {
+    .fs-quiz-scroll {
+        justify-content: center;
+    }
+}
+
+.fs-quiz-card,
+.fs-quiz-final-card {
+    width: 100%;
+    max-width: 440px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 24px 22px 26px;
+    text-align: center;
+    box-shadow: 0 20px 45px -12px rgba(26, 33, 30, 0.10);
+    margin: auto 0;
+}
+
+.fs-quiz-kicker {
+    display: block;
+    font-size: var(--text-kicker);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--christmas-red);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.fs-quiz-question {
+    font-family: var(--font-serif);
+    font-size: 1.55rem;
+    font-weight: 600;
+    line-height: 1.28;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    text-wrap: balance;
+}
+
+.fs-quiz-interaction {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+}
+
+.quiz-option-btn {
+    width: 100%;
+    padding: 13px 16px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.12s ease;
+    line-height: 1.38;
+}
+
+.quiz-option-btn:active {
+    transform: scale(0.985);
+}
+
+.quiz-option-btn.selected-wrong {
+    border-color: var(--christmas-red);
+    background-color: rgba(158, 42, 43, 0.07);
+    color: var(--christmas-red);
+}
+
+.quiz-option-btn.selected-correct {
+    border-color: var(--accent-color);
+    background-color: rgba(30, 53, 43, 0.09);
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.quiz-textarea {
+    width: 100%;
+    min-height: 92px;
+    padding: 13px 15px;
+    font-family: var(--font-sans);
+    font-size: 0.94rem;
+    line-height: 1.45;
+    color: var(--text-primary);
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    resize: vertical;
+    outline: none;
+    user-select: text;
+    -webkit-user-select: text;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.quiz-textarea:focus {
+    background-color: var(--white);
+    border-color: var(--gold-accent);
+    box-shadow: 0 0 0 3px rgba(197, 155, 95, 0.15);
+}
+
+.fs-quiz-feedback {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-subtle);
+    color: var(--text-primary);
+}
+
+.fs-quiz-feedback.is-correct {
+    background-color: rgba(30, 53, 43, 0.08);
+    border-color: rgba(30, 53, 43, 0.28);
+    color: var(--accent-color);
+}
+
+.fs-quiz-feedback.is-wrong {
+    background-color: rgba(158, 42, 43, 0.07);
+    border-color: rgba(158, 42, 43, 0.26);
+    color: var(--christmas-red);
+}
+
+.fs-quiz-next-btn {
+    margin-top: 16px;
+    background-color: var(--christmas-red);
+    box-shadow: 0 6px 16px rgba(158, 42, 43, 0.22);
+}
+
+.fs-quiz-next-btn:hover {
+    background-color: #872223;
+}
+
+.fs-quiz-photo-frame {
+    margin: 12px 0 18px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--gold-accent);
+    background-color: var(--bg-subtle);
+    box-shadow: 0 10px 24px -6px rgba(26, 33, 30, 0.14);
+}
+
+.fs-quiz-photo {
+    display: block;
+    width: 100%;
+    max-height: 52vh;
+    object-fit: cover;
+}
+
+.fs-quiz-final-msg {
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+}

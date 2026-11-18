@@ -1,0 +1,157 @@
+/* ============================================================================
+   ÉCRAN D'ACCÈS (GATE : QUESTION SECRÈTE)
+   ============================================================================ */
+
+.gate-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-gate);
+    background-color: var(--bg-color);
+    background-image:
+        radial-gradient(circle at 50% 15%, rgba(232, 213, 181, 0.38) 0%, transparent 55%),
+        radial-gradient(circle at 80% 85%, rgba(158, 42, 43, 0.05) 0%, transparent 50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 1;
+    transition: opacity 0.45s var(--ease-out-smooth), visibility 0.45s ease;
+}
+
+.gate-overlay.unlocked {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.gate-card {
+    width: 100%;
+    max-width: 380px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 26px 28px 26px;
+    text-align: center;
+    box-shadow: 0 20px 50px -12px rgba(26, 33, 30, 0.10);
+    position: relative;
+    transition: transform 0.4s var(--ease-out-smooth);
+}
+
+.gate-card::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-subtle);
+    pointer-events: none;
+}
+
+/* Coins festifs subtils sur la carte d'accueil */
+.gate-card::after {
+    content: '✦';
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 0.7rem;
+    color: var(--gold-accent);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.gate-festive-top {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 6px;
+}
+
+.gate-festive-bottom {
+    display: flex;
+    justify-content: center;
+    margin-top: 18px;
+    opacity: 0.92;
+}
+
+.gate-overlay.unlocked .gate-card {
+    transform: translateY(-12px) scale(0.97);
+}
+
+.gate-card.shake {
+    animation: gateShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes gateShake {
+    10%, 90% { transform: translateX(-4px); }
+    20%, 80% { transform: translateX(6px); }
+    30%, 50%, 70% { transform: translateX(-8px); }
+    40%, 60% { transform: translateX(8px); }
+}
+
+.gate-kicker {
+    display: block;
+    font-size: var(--text-kicker);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--christmas-red);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.gate-question {
+    font-family: var(--font-serif);
+    font-size: var(--text-title-xl);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-primary);
+    margin-bottom: 22px;
+    text-wrap: balance;
+}
+
+.gate-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+}
+
+.gate-input-wrap {
+    width: 100%;
+}
+
+.gate-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.gate-input::placeholder {
+    color: var(--text-muted);
+}
+
+.gate-input:focus {
+    background-color: var(--white);
+    border-color: var(--gold-accent);
+    box-shadow: 0 0 0 3px rgba(197, 155, 95, 0.15);
+}
+
+.gate-error {
+    min-height: 18px;
+    font-size: 0.78rem;
+    color: var(--christmas-red);
+    font-weight: 500;
+    margin: -2px 0;
+}
+
+.gate-submit {
+    margin-top: 2px;
+}

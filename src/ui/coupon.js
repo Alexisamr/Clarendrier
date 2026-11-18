@@ -49,6 +49,13 @@ export function initCouponListeners() {
     if (fsCouponCloseBtn) {
         fsCouponCloseBtn.addEventListener('click', closeFullscreenCoupon);
     }
+    if (fsCouponOverlay) {
+        fsCouponOverlay.addEventListener('click', (e) => {
+            if (e.target === fsCouponOverlay || e.target.classList.contains('fs-coupon-stage')) {
+                closeFullscreenCoupon();
+            }
+        });
+    }
 }
 
 function spawnCouponSparkles() {

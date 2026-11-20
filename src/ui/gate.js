@@ -11,7 +11,8 @@ import {
     isGateSessionValid,
     saveGateSession,
     isGateAdminPassword,
-    isGateAnswerValid
+    isGateAnswerValid,
+    getGateCustomError
 } from '../logic/state.js';
 import {
     gateOverlay,
@@ -62,7 +63,7 @@ export function initGate() {
         if (isGateAnswerValid(activeQ, userVal)) {
             completeGateLogin();
         } else {
-            gateError.textContent = UI_TEXTS.GATE_ERROR;
+            gateError.textContent = getGateCustomError(activeQ, userVal) || UI_TEXTS.GATE_ERROR;
             gateCard.classList.remove('shake');
             void gateCard.offsetWidth;
             gateCard.classList.add('shake');

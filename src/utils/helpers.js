@@ -4,19 +4,35 @@
  * ============================================================================
  */
 
-const FRENCH_ARTICLE_PREFIX_REGEX = /^(le |la |l'|les |un |une )/i;
+const FRENCH_ARTICLE_PREFIX_REGEX = /^(le |la |l'|les |un |une |au |aux |du |de la |de l'|des )/i;
 const DIACRITICS_REGEX = /[\u0300-\u036f]/g;
+const CURLY_APOSTROPHE_REGEX = /[’‘`]/g;
+const PUNCTUATION_TO_SPACE_REGEX = /['\-_.,;:!?()"]/g;
+const MULTI_SPACE_REGEX = /\s+/g;
 const UINT32_MAX_PLUS_ONE = 0xFFFFFFFF + 1;
 
 /**
- * Normalise une réponse texte (minuscules, sans accents, sans article défini/indéfini).
+ * Normalise une réponse texte (minuscules, sans accents, apostrophes unifiées, sans article initial).
  */
 export function normalizeAnswer(str) {
     return (str || '')
         .toLowerCase()
         .normalize('NFD')
         .replace(DIACRITICS_REGEX, '')
+        .replace(CURLY_APOSTROPHE_REGEX, "'")
+        .replace(MULTI_SPACE_REGEX, ' ')
+        .trim()
         .replace(FRENCH_ARTICLE_PREFIX_REGEX, '')
+        .trim();
+}
+
+/**
+ * Normalise une réponse pour la recherche souple par mots-clés (remplace la ponctuation par des espaces).
+ */
+export function normalizeForKeywordMatch(str) {
+    return normalizeAnswer(str)
+        .replace(PUNCTUATION_TO_SPACE_REGEX, ' ')
+        .replace(MULTI_SPACE_REGEX, ' ')
         .trim();
 }
 

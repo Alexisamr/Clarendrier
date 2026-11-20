@@ -31,6 +31,13 @@ function getDay24CardMarkup(day) {
             `;
 }
 
+function getDay23CardMarkup(day) {
+    return `
+                <span class="day-kicker">${UI_TEXTS.CARD_KICKER_DAY_23}</span>
+                <span class="day-number">${day}</span>
+            `;
+}
+
 function getStandardCardMarkup(day) {
     return `
                 <span class="day-kicker">${UI_TEXTS.CARD_KICKER_DEFAULT}</span>
@@ -44,7 +51,9 @@ export function renderGrid() {
     calendarData.forEach((item) => {
         const card = document.createElement('div');
         card.className = 'day-card';
+        const isDay23 = item.day === CALENDAR_CONFIG.DAY_23;
         const isChristmasEve = item.day === CALENDAR_CONFIG.CHRISTMAS_EVE_DAY;
+        if (isDay23) card.classList.add('day-23');
         if (isChristmasEve) card.classList.add('day-24');
 
         const isOpened = isDayOpened(item.day);
@@ -58,9 +67,13 @@ export function renderGrid() {
             card.classList.add('locked');
         }
 
-        card.innerHTML = isChristmasEve
-            ? getDay24CardMarkup(item.day)
-            : getStandardCardMarkup(item.day);
+        if (isChristmasEve) {
+            card.innerHTML = getDay24CardMarkup(item.day);
+        } else if (isDay23) {
+            card.innerHTML = getDay23CardMarkup(item.day);
+        } else {
+            card.innerHTML = getStandardCardMarkup(item.day);
+        }
 
         card.addEventListener('click', () => {
             if (!unlocked) {

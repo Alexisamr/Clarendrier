@@ -13,10 +13,15 @@ import {
     GATE_REMEMBER_HOURS,
     QUESTION_ROTATION_HOURS,
     GATE_ADMIN_PASSWORDS,
+    GATE_MASTER_PASSWORDS,
     GATE_FALLBACK_QUESTION,
     GATE_QUESTIONS
 } from '../data/calendarData.js';
-import { normalizeAnswer, formatFrenchShortDate } from '../utils/helpers.js';
+import {
+    normalizeAnswer,
+    normalizeForKeywordMatch,
+    formatFrenchShortDate
+} from '../utils/helpers.js';
 
 const MS_PER_HOUR = 3600 * 1000;
 
@@ -135,7 +140,35 @@ export function isGateAdminPassword(normalizedInput) {
 }
 
 export function isGateAnswerValid(activeQuestion, normalizedInput) {
-    return activeQuestion.answers.some((ans) => normalizeAnswer(ans) === normalizedInput);
+    const isMasterPassword = GATE_MASTER_PASSWORDS.some(
+        (pwd) => normalizeAnswer(pwd) === normalizedInput
+    );
+    if (isMasterPassword) return true;
+
+    const exactMatch = activeQuestion.answers.some(
+        (ans) => normalizeAnswer(ans) === normalizedInput
+    );
+    if (exactMatch) return true;
+
+    if (Array.isArray(activeQuestion.acceptedKeywords) && activeQuestion.acceptedKeywords.length > 0) {
+        const cleanedInput = normalizeForKeywordMatch(normalizedInput);
+        return activeQuestion.acceptedKeywords.some((kw) => {
+            const cleanedKw = normalizeForKeywordMatch(kw);
+            return cleanedKw && cleanedInput.includes(cleanedKw);
+        });
+    }
+
+    return false;
+}
+
+export function getGateCustomError(activeQuestion, normalizedInput) {
+    if (!activeQuestion || !activeQuestion.customErrors) return null;
+    for (const [key, message] of Object.entries(activeQuestion.customErrors)) {
+        if (normalizeAnswer(key) === normalizedInput) {
+            return message;
+        }
+    }
+    return null;
 }
 
 /* -------------------------------------------------------------------------

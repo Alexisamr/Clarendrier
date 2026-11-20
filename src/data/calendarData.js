@@ -21,6 +21,7 @@ export const DEV_MODE = true;
 
 export const CALENDAR_CONFIG = {
     TOTAL_DAYS: 24,
+    DAY_23: 23,
     CHRISTMAS_EVE_DAY: 24,
     UNLOCK_MONTH_INDEX: 11 // 11 = Décembre en JavaScript (0 = Janvier)
 };
@@ -62,6 +63,8 @@ export const ASSET_PATHS = {
 export const GATE_REMEMBER_HOURS = 24;
 export const QUESTION_ROTATION_HOURS = 24;
 export const GATE_ADMIN_PASSWORDS = ['alexis', 'admin'];
+// Mots passe-partout permettant d'entrer sur le site quelle que soit la question du jour (insensible à la casse : clara / Clara)
+export const GATE_MASTER_PASSWORDS = ['clara'];
 
 export const GATE_FALLBACK_QUESTION = {
     question: "Quelle est ma couleur préférée ?",
@@ -73,16 +76,80 @@ export const GATE_QUESTIONS = [
         question: "Quelle est ma couleur préférée ?",
         // Mets ici uniquement ta vraie couleur préférée si tu veux restreindre à une seule réponse :
         answers: [
-            "bleu", "vert", "noir", "rouge", "blanc", "rose", "violet",
+            "bleu", "vert", "noir", "rouge", "blanc", "violet",
             "jaune", "orange", "gris", "marron", "beige", "bordeaux",
             "marine", "turquoise", "kaki", "corail", "lavande"
+        ],
+        // Messages d'erreur personnalisés pour certaines mauvaises réponses (insensible à la casse)
+        customErrors: {
+            "rose": "je savais t'allais répondre ça et c'est FAUX (un peu vrai mais j'assume pas)."
+        }
+    },
+    {
+        question: "Dans quel musée avons nous fait notre première sortie tout les deux ?",
+        answers: [
+            "musée d'histoire naturelle",
+            "musee d'histoire naturelle",
+            "musée d histoire naturelle",
+            "musée dhistoire naturelle",
+            "musée d'histoire naturel",
+            "musée d'histoires naturelles",
+            "musée de l'histoire naturelle",
+            "musée des histoires naturelles",
+            "musée national d'histoire naturelle",
+            "muséum d'histoire naturelle",
+            "museum d'histoire naturelle",
+            "muséum national d'histoire naturelle",
+            "museum national d'histoire naturelle",
+            "muséum",
+            "museum",
+            "histoire naturelle",
+            "histoire naturel",
+            "histoires naturelles",
+            "d'histoire naturelle",
+            "d histoire naturelle",
+            "dhistoire naturelle",
+            "histoire nat",
+            "mnhn",
+            "mhnh",
+            "musée naturel",
+            "musée naturelle",
+            "musée de la nature",
+            "musée nature",
+            "grande galerie de l'évolution",
+            "galerie de l'évolution",
+            "jardin des plantes",
+            "musée des animaux",
+            "musée des dinosaures"
+        ],
+        // Validation souple : accepte toute réponse contenant l'une de ces variantes (même dans une phrase ou avec de petites fautes)
+        acceptedKeywords: [
+            "histoire nat",
+            "histoires nat",
+            "naturelle",
+            "naturel",
+            "naturele",
+            "museum",
+            "mnhn",
+            "m n h n",
+            "mhnh",
+            "musee d histoire",
+            "musee histoire",
+            "musee dhistoire",
+            "musee de l histoire",
+            "musee de la nature",
+            "musee nature",
+            "galerie de l evolution",
+            "galerie evolution",
+            "grande galerie",
+            "jardin des plantes",
+            "musee des animaux",
+            "musee animaux",
+            "musee des dinosaures",
+            "musee dinosaures"
         ]
     }
-    // Tu peux ajouter d'autres questions ici qui tourneront toutes les X heures :
-    // {
-    //     question: "Où avons-nous passé notre premier week-end ?",
-    //     answers: ["cap ferret", "ferret", "bordeaux"]
-    // }
+    // Tu peux ajouter d'autres questions ici qui tourneront toutes les X heures
 ];
 
 /* -------------------------------------------------------------------------
@@ -321,6 +388,7 @@ export const UI_TEXTS = {
     GATE_ERROR: 'Mauvaise réponse, réessaie…',
     LOCKED_DAY_TOAST: (day) => `Patience… ouverture le ${day} décembre`,
     CARD_KICKER_DEFAULT: 'Déc',
+    CARD_KICKER_DAY_23: 'Veille de la veille de Noël',
     CARD_KICKER_DAY_24: 'Veille de Noël',
     MODAL_DAY_TITLE: (day) => `${day} Décembre`,
     SECRET_NOTEBOOK_TITLE: 'Carnet secret • Réponses de Clara',

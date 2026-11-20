@@ -122,6 +122,36 @@
     background-color: rgba(255, 255, 255, 0.6);
 }
 
+/* Special Card: Day 23 (Veille de la veille de Noël — occupe 2 colonnes) */
+.day-card.day-23 {
+    grid-column: span 2;
+    aspect-ratio: auto;
+    height: 100%;
+    background: linear-gradient(135deg, #355B4A 0%, #416E5A 52%, #2F5242 100%);
+    border-color: rgba(197, 155, 95, 0.8);
+    color: var(--bg-color);
+    box-shadow: 0 10px 26px -8px rgba(47, 82, 66, 0.28);
+}
+
+.day-card.day-23 .day-kicker {
+    color: var(--gold-light);
+    letter-spacing: 0.11em;
+    font-size: 0.6rem;
+    margin-bottom: 4px;
+    padding: 0 10px;
+    text-align: center;
+    line-height: 1.25;
+}
+
+.day-card.day-23 .day-number {
+    color: var(--white);
+    font-size: 2.3rem;
+}
+
+.day-card.day-23.opened {
+    background: linear-gradient(135deg, #3D6553 0%, #335747 100%);
+}
+
 /* Special Card: Day 24 (Christmas Eve) */
 .day-card.day-24 {
     grid-column: span 3;

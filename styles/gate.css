@@ -61,7 +61,7 @@
 .gate-festive-top {
     display: flex;
     justify-content: center;
-    margin-bottom: 6px;
+    margin-bottom: 12px;
 }
 
 .gate-festive-bottom {
@@ -84,16 +84,6 @@
     20%, 80% { transform: translateX(6px); }
     30%, 50%, 70% { transform: translateX(-8px); }
     40%, 60% { transform: translateX(8px); }
-}
-
-.gate-kicker {
-    display: block;
-    font-size: var(--text-kicker);
-    text-transform: uppercase;
-    letter-spacing: 0.22em;
-    color: var(--christmas-red);
-    font-weight: 600;
-    margin-bottom: 10px;
 }
 
 .gate-question {

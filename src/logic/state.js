@@ -108,12 +108,13 @@ export function isDayUnlocked(dayNumber) {
    5. LOGIQUE DU PORTAIL D'ACCÈS (GATE)
    ------------------------------------------------------------------------- */
 export function getActiveGateQuestion() {
-    if (!GATE_QUESTIONS.length) {
+    const activeQuestions = GATE_QUESTIONS.filter((q) => q.active !== false);
+    if (!activeQuestions.length) {
         return GATE_FALLBACK_QUESTION;
     }
     const rotationMs = Math.max(1, QUESTION_ROTATION_HOURS) * MS_PER_HOUR;
-    const index = Math.floor(Date.now() / rotationMs) % GATE_QUESTIONS.length;
-    return GATE_QUESTIONS[index];
+    const index = Math.floor(Date.now() / rotationMs) % activeQuestions.length;
+    return activeQuestions[index];
 }
 
 export function isGateSessionValid() {
@@ -133,6 +134,10 @@ export function saveGateSession() {
     localStorage.setItem(STORAGE_KEYS.GATE_AUTH, JSON.stringify({
         unlockedAt: Date.now()
     }));
+}
+
+export function clearGateSession() {
+    localStorage.removeItem(STORAGE_KEYS.GATE_AUTH);
 }
 
 export function isGateAdminPassword(normalizedInput) {

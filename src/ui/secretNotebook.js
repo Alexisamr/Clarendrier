@@ -9,19 +9,56 @@
 import { UI_TEXTS } from '../data/calendarData.js';
 import { fetchMergedQuizAnswers } from '../logic/state.js';
 import { modalDay, modalBody, modalOverlay, footerEl } from './dom.js';
+import { closeModal } from './modal.js';
+import { reopenGate } from './gate.js';
+import { lancerIntroCapFerret } from './intro-capferret.js';
 
 const SECRET_TRIGGER_TAPS = 3;
 const SECRET_TRIGGER_RESET_MS = 650;
 
+function createSecretActionButtons() {
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.gap = '10px';
+    wrapper.style.marginTop = '16px';
+
+    const gateBtn = document.createElement('button');
+    gateBtn.type = 'button';
+    gateBtn.className = 'btn-sober';
+    gateBtn.textContent = "Revenir à l'écran de vérification";
+    gateBtn.addEventListener('click', () => {
+        closeModal();
+        reopenGate();
+    });
+
+    const capFerretBtn = document.createElement('button');
+    capFerretBtn.type = 'button';
+    capFerretBtn.className = 'btn-sober';
+    capFerretBtn.textContent = "Tester l'intro Cap Ferret";
+    capFerretBtn.addEventListener('click', () => {
+        closeModal();
+        lancerIntroCapFerret();
+    });
+
+    wrapper.appendChild(gateBtn);
+    wrapper.appendChild(capFerretBtn);
+    return wrapper;
+}
+
 export async function openSecretAnswersModal() {
     modalDay.textContent = UI_TEXTS.SECRET_NOTEBOOK_TITLE;
     modalBody.innerHTML = `<div style="font-size:0.88rem;color:var(--text-secondary);">${UI_TEXTS.SECRET_NOTEBOOK_LOADING}</div>`;
+    modalBody.appendChild(createSecretActionButtons());
     modalOverlay.classList.add('active');
     modalOverlay.setAttribute('aria-hidden', 'false');
 
     const entries = await fetchMergedQuizAnswers();
+    if (!modalOverlay.classList.contains('active')) return;
+
     if (!entries.length) {
         modalBody.innerHTML = UI_TEXTS.SECRET_NOTEBOOK_EMPTY;
+        modalBody.appendChild(createSecretActionButtons());
         return;
     }
 
@@ -46,6 +83,7 @@ export async function openSecretAnswersModal() {
 
     modalBody.innerHTML = '';
     modalBody.appendChild(listEl);
+    modalBody.appendChild(createSecretActionButtons());
 }
 
 export function initSecretFooterTrigger() {

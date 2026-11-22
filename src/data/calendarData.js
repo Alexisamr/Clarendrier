@@ -73,6 +73,7 @@ export const GATE_FALLBACK_QUESTION = {
 
 export const GATE_QUESTIONS = [
     {
+        active: true, // Passe à `false` pour désactiver cette question, ou passe les suivantes à `true` au fur et à mesure
         question: "Quelle est ma couleur préférée ?",
         // Mets ici uniquement ta vraie couleur préférée si tu veux restreindre à une seule réponse :
         answers: [
@@ -86,6 +87,7 @@ export const GATE_QUESTIONS = [
         }
     },
     {
+        active: false, // Prête à activer plus tard (passe simplement à `true`)
         question: "Dans quel musée avons nous fait notre première sortie tout les deux ?",
         answers: [
             "musée d'histoire naturelle",
@@ -293,8 +295,7 @@ export const SURPRISES_CATALOG = {
                 shortTitle: "Question 1 • Livre d'Or de la Croix du Mont Lachat (Annecy)",
                 question: "Première question sérieuse (promis les autres ne le sont pas) Que pense tu que j'ai mis dans le livre d'Or de la Croix du Mont Lachat à coté d'Annecy ?",
                 type: "text",
-                placeholder: "Écris ce que tu penses ici...",
-                feedback: "C'est bien noté dans mon petit carnet ❤️"
+                placeholder: "Écris ce que tu penses ici..."
             },
             {
                 id: "q2_arrivee_cap",
@@ -352,8 +353,7 @@ export const SURPRISES_CATALOG = {
                 shortTitle: "Question 4 • Nos prochaines vacances tous les deux",
                 question: "Quand est-ce qu'on re part en vaccances tout les deux ?",
                 type: "text",
-                placeholder: "Dis-moi quand...",
-                feedback: "C'est promis, je note ça précieusement ❤️"
+                placeholder: "Dis-moi quand..."
             }
         ]
     },

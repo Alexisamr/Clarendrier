@@ -67,6 +67,27 @@ export function launchFullscreenQuiz(item) {
         });
     }
 
+    function goToNextStep() {
+        if (currentIndex < questions.length - 1) {
+            currentIndex++;
+            renderCurrentQuestion();
+        } else {
+            // Fin du quiz : on enregistre la victoire et on ouvre la pop-up finale avec cap.png
+            markGameWon(item.day);
+            fsQuizStepLabel.textContent = 'Quiz terminé !';
+            renderDots(true);
+
+            fsQuizCard.hidden = true;
+            fsQuizFinalCard.hidden = false;
+            if (fsQuizFinalMsg) {
+                fsQuizFinalMsg.textContent = item.finalMessage || DEFAULT_FINAL_MESSAGE;
+            }
+
+            // Met à jour la modale du jour en arrière-plan
+            openModal(item);
+        }
+    }
+
     function renderTextQuestion(q, qTitle, quizTitle) {
         const saved = getSavedQuizAnswers()[q.id];
         const textarea = document.createElement('textarea');
@@ -96,11 +117,17 @@ export function launchFullscreenQuiz(item) {
             saveAndSyncQuizAnswer(q.id, qTitle, val, quizTitle);
             textarea.blur();
 
-            fsQuizFeedback.hidden = false;
-            fsQuizFeedback.className = 'fs-quiz-feedback is-correct';
-            fsQuizFeedback.textContent = q.feedback || 'Réponse enregistrée ❤️';
-            validateBtn.hidden = true;
-            fsQuizNextBtn.hidden = false;
+            if (q.feedback) {
+                fsQuizFeedback.hidden = false;
+                fsQuizFeedback.className = 'fs-quiz-feedback is-correct';
+                fsQuizFeedback.textContent = q.feedback;
+                validateBtn.hidden = true;
+                fsQuizNextBtn.hidden = false;
+            } else {
+                fsQuizFeedback.hidden = true;
+                fsQuizFeedback.textContent = '';
+                goToNextStep();
+            }
         });
 
         fsQuizInteraction.appendChild(textarea);
@@ -128,8 +155,13 @@ export function launchFullscreenQuiz(item) {
                     }
                 });
 
-                fsQuizFeedback.hidden = false;
-                fsQuizFeedback.textContent = opt.feedback;
+                if (opt.feedback) {
+                    fsQuizFeedback.hidden = false;
+                    fsQuizFeedback.textContent = opt.feedback;
+                } else {
+                    fsQuizFeedback.hidden = true;
+                    fsQuizFeedback.textContent = '';
+                }
 
                 if (opt.isCorrect) {
                     btn.classList.remove('selected-wrong');
@@ -177,26 +209,7 @@ export function launchFullscreenQuiz(item) {
         }
     }
 
-    fsQuizNextBtn.onclick = () => {
-        if (currentIndex < questions.length - 1) {
-            currentIndex++;
-            renderCurrentQuestion();
-        } else {
-            // Fin du quiz : on enregistre la victoire et on ouvre la pop-up finale avec cap.png
-            markGameWon(item.day);
-            fsQuizStepLabel.textContent = 'Quiz terminé !';
-            renderDots(true);
-
-            fsQuizCard.hidden = true;
-            fsQuizFinalCard.hidden = false;
-            if (fsQuizFinalMsg) {
-                fsQuizFinalMsg.textContent = item.finalMessage || DEFAULT_FINAL_MESSAGE;
-            }
-
-            // Met à jour la modale du jour en arrière-plan
-            openModal(item);
-        }
-    };
+    fsQuizNextBtn.onclick = goToNextStep;
 
     renderCurrentQuestion();
 }

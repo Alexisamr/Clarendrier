@@ -19,10 +19,7 @@ const SECRET_TRIGGER_RESET_MS = 650;
 
 function createSecretActionButtons() {
     const wrapper = document.createElement('div');
-    wrapper.style.display = 'flex';
-    wrapper.style.flexDirection = 'column';
-    wrapper.style.gap = '10px';
-    wrapper.style.marginTop = '16px';
+    wrapper.className = 'secret-actions-group';
 
     const gateBtn = document.createElement('button');
     gateBtn.type = 'button';
@@ -59,22 +56,40 @@ function createSecretActionButtons() {
 
 export async function openSecretAnswersModal() {
     modalDay.textContent = UI_TEXTS.SECRET_NOTEBOOK_TITLE;
-    modalBody.innerHTML = `<div style="font-size:0.88rem;color:var(--text-secondary);">${UI_TEXTS.SECRET_NOTEBOOK_LOADING}</div>`;
-    modalBody.appendChild(createSecretActionButtons());
+    modalBody.innerHTML = '';
+
+    const loadingList = document.createElement('div');
+    loadingList.className = 'secret-answers-list';
+    loadingList.appendChild(createSecretActionButtons());
+
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'secret-notebook-status';
+    loadingMsg.textContent = UI_TEXTS.SECRET_NOTEBOOK_LOADING;
+    loadingList.appendChild(loadingMsg);
+
+    modalBody.appendChild(loadingList);
+    modalBody.scrollTop = 0;
     modalOverlay.classList.add('active');
     modalOverlay.setAttribute('aria-hidden', 'false');
 
     const entries = await fetchMergedQuizAnswers();
     if (!modalOverlay.classList.contains('active')) return;
 
-    if (!entries.length) {
-        modalBody.innerHTML = UI_TEXTS.SECRET_NOTEBOOK_EMPTY;
-        modalBody.appendChild(createSecretActionButtons());
-        return;
-    }
-
     const listEl = document.createElement('div');
     listEl.className = 'secret-answers-list';
+    listEl.appendChild(createSecretActionButtons());
+
+    if (!entries.length) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'secret-notebook-empty';
+        emptyMsg.innerHTML = UI_TEXTS.SECRET_NOTEBOOK_EMPTY;
+        listEl.appendChild(emptyMsg);
+
+        modalBody.innerHTML = '';
+        modalBody.appendChild(listEl);
+        modalBody.scrollTop = 0;
+        return;
+    }
 
     entries.forEach((item) => {
         const div = document.createElement('div');
@@ -94,7 +109,7 @@ export async function openSecretAnswersModal() {
 
     modalBody.innerHTML = '';
     modalBody.appendChild(listEl);
-    modalBody.appendChild(createSecretActionButtons());
+    modalBody.scrollTop = 0;
 }
 
 export function initSecretFooterTrigger() {

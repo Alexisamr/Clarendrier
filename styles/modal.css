@@ -340,9 +340,29 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-top: 10px;
-    max-height: 55vh;
-    overflow-y: auto;
+    margin-top: 4px;
+    padding-bottom: 8px;
+}
+
+.secret-actions-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 14px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.secret-notebook-status {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 8px 0;
+}
+
+.secret-notebook-empty {
+    text-align: center;
+    padding: 6px 0;
 }
 
 .secret-answer-item {

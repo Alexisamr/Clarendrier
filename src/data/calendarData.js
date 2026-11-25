@@ -181,6 +181,7 @@ export const DAY_ASSIGNMENTS = {
     19: 'physical_lettre',       // Jour 19 : Cadeau physique (lettre avec photo de nous deux)
     20: 'lucky_wheel',           // Jour 20 : La Roue de la Chance
     21: 'physical_bracelet',     // Jour 21 : Cadeau physique (bracelet fait main)
+    22: 'museum_gallery',        // Jour 22 : Jeu Grande Galerie de l'Évolution (Muséum de Paris)
     24: 'physical_noel_24'       // Jour 24 : Cadeau physique (Lettre malo + photo + JBL Go 4)
 };
 
@@ -191,7 +192,6 @@ export const EMPTY_DAYS_CONTENT = {
     10: "",
     15: "",
     18: "",
-    22: "",
     23: ""
 };
 
@@ -388,6 +388,13 @@ export const SURPRISES_CATALOG = {
         gameSubtitle: "",
         content: "",
         segments: DEFAULT_WHEEL_SEGMENTS
+    },
+
+    museum_gallery: {
+        game: "museum_gallery",
+        gameTitle: "La Grande Galerie de l'Évolution",
+        gameSubtitle: "Premier rendez-vous • Muséum de Paris",
+        content: ""
     },
 
     physical_chocolats: {

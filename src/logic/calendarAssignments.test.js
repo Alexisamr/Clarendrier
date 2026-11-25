@@ -18,6 +18,7 @@ test('calendarData maps all 24 days to the exact requested app gifts, physical g
     assert.equal(byDay(14).surpriseKey, 'scratch_photo_2');
     assert.equal(byDay(16).surpriseKey, 'coupon_massage');
     assert.equal(byDay(20).surpriseKey, 'lucky_wheel');
+    assert.equal(byDay(22).surpriseKey, 'museum_gallery');
 
     // Exact physical gift days
     const physicalDays = calendarData.filter((i) => i.giftKind === 'physical').map((i) => i.day);
@@ -41,16 +42,16 @@ test('calendarData maps all 24 days to the exact requested app gifts, physical g
     const todoDays = calendarData.filter((i) => i.cardNote === 'à faire').map((i) => i.day);
     assert.deepEqual(todoDays, [2, 6, 17, 19, 21, 24]);
 
-    // Exact 'vide' notes on days 10, 13, 15, 18, 22, and 23
+    // Exact 'vide' notes on days 10, 13, 15, 18, and 23
     const videDays = calendarData.filter((i) => i.cardNote === 'vide').map((i) => i.day);
-    assert.deepEqual(videDays, [10, 13, 15, 18, 22, 23]);
+    assert.deepEqual(videDays, [10, 13, 15, 18, 23]);
     videDays.forEach((d) => {
         assert.equal(byDay(d).content, '');
     });
 
     // Exact empty/unassigned days
     const emptyDays = calendarData.filter((i) => i.giftKind === 'empty').map((i) => i.day);
-    assert.deepEqual(emptyDays, [10, 15, 18, 22, 23]);
+    assert.deepEqual(emptyDays, [10, 15, 18, 23]);
     emptyDays.forEach((d) => {
         assert.equal(DAY_ASSIGNMENTS[d], undefined);
         assert.equal(byDay(d).isEmpty, true);
@@ -60,7 +61,7 @@ test('calendarData maps all 24 days to the exact requested app gifts, physical g
 
     // Exact app gift days
     const appDays = calendarData.filter((i) => i.giftKind === 'app').map((i) => i.day);
-    assert.deepEqual(appDays, [1, 3, 4, 5, 7, 9, 12, 14, 16, 20]);
+    assert.deepEqual(appDays, [1, 3, 4, 5, 7, 9, 12, 14, 16, 20, 22]);
 
     // Massage coupon updated text
     assert.equal(SURPRISES_CATALOG.coupon_massage.couponTitle, 'Bon pour un EENORME massage');

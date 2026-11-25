@@ -31,6 +31,7 @@ import {
 import { launchFullscreenFerretGame, closeFullscreenGame } from './ferretGame.js';
 import { launchFullscreenMidnightSwim } from './midnightSwim.js';
 import { launchFullscreenLuckyWheel } from './luckyWheel.js';
+import { launchFullscreenMuseumGame } from './museumGame.js';
 
 const MOBILE_USER_AGENT_REGEX = /iPhone|iPad|iPod|Android/i;
 const SPOTIFY_FALLBACK_DELAY_MS = 650;
@@ -267,6 +268,26 @@ function renderLuckyWheelModalContent(item) {
     modalBody.appendChild(wheelBox);
 }
 
+function renderMuseumGalleryModalContent(item, hasWon) {
+    const launchBox = document.createElement('div');
+    launchBox.className = 'museum-launch-box';
+    launchBox.innerHTML = `
+            <div class="museum-launch-arch" aria-hidden="true"></div>
+            <div class="game-launch-content">
+                <span class="game-launch-tag">${item.gameSubtitle}</span>
+                <h3 class="game-launch-title">${item.gameTitle}</h3>
+                <div class="game-launch-cta">
+                    <span>${hasWon ? '↺ Retourner dans la galerie' : '▶ Entrer dans le Muséum'}</span>
+                </div>
+            </div>
+        `;
+    launchBox.addEventListener('click', () => {
+        closeModal();
+        launchFullscreenMuseumGame(item);
+    });
+    modalBody.appendChild(launchBox);
+}
+
 /* Ouvre la modale du jour avec la petite box cliquable pour le jeu, le quiz ou le coupon */
 export function openModal(item) {
     modalDay.textContent = UI_TEXTS.MODAL_DAY_TITLE(item.day);
@@ -288,6 +309,8 @@ export function openModal(item) {
         renderMidnightSwimModalContent(item, hasWon);
     } else if (item.game === 'lucky_wheel') {
         renderLuckyWheelModalContent(item);
+    } else if (item.game === 'museum_gallery') {
+        renderMuseumGalleryModalContent(item, hasWon);
     } else {
         modalBody.innerHTML = `<div>${item.content}</div>`;
     }

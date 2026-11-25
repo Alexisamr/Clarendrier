@@ -12,6 +12,7 @@ import { modalDay, modalBody, modalOverlay, footerEl } from './dom.js';
 import { closeModal } from './modal.js';
 import { reopenGate } from './gate.js';
 import { lancerIntroCapFerret } from './intro-capferret.js';
+import { lancerIntroMuseum } from './intro-museum.js';
 
 const SECRET_TRIGGER_TAPS = 3;
 const SECRET_TRIGGER_RESET_MS = 650;
@@ -41,8 +42,18 @@ function createSecretActionButtons() {
         lancerIntroCapFerret();
     });
 
+    const museumBtn = document.createElement('button');
+    museumBtn.type = 'button';
+    museumBtn.className = 'btn-sober';
+    museumBtn.textContent = "Tester l'intro Muséum";
+    museumBtn.addEventListener('click', () => {
+        closeModal();
+        lancerIntroMuseum();
+    });
+
     wrapper.appendChild(gateBtn);
     wrapper.appendChild(capFerretBtn);
+    wrapper.appendChild(museumBtn);
     return wrapper;
 }
 

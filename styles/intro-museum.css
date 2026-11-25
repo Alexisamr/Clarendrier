@@ -1,0 +1,162 @@
+/* ============================================================================
+   ANIMATION D'OUVERTURE MUSÉUM — GRANDE GALERIE DE L'ÉVOLUTION (PARIS)
+   - Styles autonomes, 100% GPU (transform / opacity) pour 60 fps sur mobile
+   - Même architecture d'ouverture que l'animation montagne (intro-montagne.css)
+   - Retiré entièrement du DOM dès la fin de l'animation
+   ============================================================================ */
+
+.intro-museum-overlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 680;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    background: transparent;
+}
+
+.intro-museum-overlay.is-visible {
+    opacity: 1;
+}
+
+.intro-museum-overlay.is-passing-through {
+    pointer-events: none;
+}
+
+/* --- FOND INTÉRIEUR DE LA NEF & COUCHES D'ARCHITECTURE EN PARALLAXE --- */
+.intro-museum-hall {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        180deg,
+        #32271D 0%,
+        #261C15 24%,
+        #1D1510 58%,
+        #16100C 100%
+    );
+    will-change: opacity, transform;
+    overflow: hidden;
+}
+
+/* Lueur tamisée et chaude filtrant à travers la grande verrière */
+.intro-museum-skylight-glow {
+    position: absolute;
+    inset: -6% -8% 20% -8%;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 68% 42% at 50% 8%, rgba(255, 236, 192, 0.42) 0%, rgba(232, 184, 118, 0.16) 46%, transparent 78%),
+        radial-gradient(ellipse 52% 48% at 50% 54%, rgba(214, 162, 98, 0.14) 0%, transparent 72%);
+}
+
+.intro-museum-parallax-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    will-change: transform, opacity;
+    transform-origin: center 42%;
+}
+
+.intro-museum-layer-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* --- HALO DORÉ CENTRAL (LUMIÈRE RÉVÉLANT LE CALENDRIER DERRIÈRE LES PORTES) --- */
+.intro-museum-golden-bloom {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    will-change: opacity, transform;
+    background: radial-gradient(
+        ellipse 48% 70% at 50% 56%,
+        rgba(255, 250, 234, 0.96) 0%,
+        rgba(246, 218, 156, 0.72) 32%,
+        rgba(197, 155, 95, 0.28) 62%,
+        rgba(197, 155, 95, 0) 100%
+    );
+}
+
+/* --- GRANDES PORTES DU MUSÉUM & PARQUET (DEUX MOITIÉS QUI S'OUVRENT) --- */
+.intro-museum-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.intro-museum-half {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    will-change: transform, opacity;
+    transform: translate3d(0, 0, 0);
+}
+
+.intro-museum-seam-glow {
+    position: absolute;
+    top: 16%;
+    bottom: 0;
+    left: 50%;
+    width: 6px;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    will-change: opacity;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 244, 210, 0.15) 0%,
+        rgba(255, 232, 166, 0.95) 26%,
+        rgba(232, 194, 115, 1) 70%,
+        rgba(255, 248, 226, 0.78) 100%
+    );
+    box-shadow: 0 0 14px rgba(255, 224, 146, 0.85);
+}
+
+/* Faisceau lumineux vertical au centre avant l'écartement des grandes portes */
+.intro-museum-crack-beam {
+    position: absolute;
+    top: 15%;
+    bottom: 0;
+    left: 50%;
+    width: 18px;
+    transform: translate3d(-50%, 0, 0) scaleY(0);
+    transform-origin: center 62%;
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+    background: linear-gradient(
+        90deg,
+        rgba(232, 213, 181, 0) 0%,
+        rgba(255, 230, 160, 0.78) 34%,
+        rgba(255, 253, 244, 1) 50%,
+        rgba(255, 230, 160, 0.78) 66%,
+        rgba(232, 213, 181, 0) 100%
+    );
+    filter: blur(4px);
+}
+
+/* --- CANVAS PREMIER PLAN : RAYONS, CORTÈGE D'ANIMAUX, POUSSIÈRE & AVATARS --- */
+.intro-museum-canvas--fg {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: block;
+}

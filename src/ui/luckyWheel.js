@@ -2,34 +2,56 @@
  * ============================================================================
  * ROUE DE LA CHANCE HAUTE FIDÉLITÉ (JOUR 9)
  * - Esthétique éditoriale sapin / ivoire / bordeaux / or brossé dans la DA du site
- * - Segments vides pour l'instant (prêts à accueillir du texte plus tard)
- * - Aléatoire cryptographique réel (window.crypto.getRandomValues)
- * - Lancement au doigt (glisser-lancer directement sur la roue) ou via le bouton
- * - Physique réaliste des clous dorés qui percutent le clapet supérieur avec rebond
- *   et synthèse audio Web Audio API (cliquetis horloger/bois/laiton)
+ * - 3 tours affichés au-dessus de la roue (« Il te reste X tour(s) »)
+ * - Déroulement dirigé sur les 4 premiers lancers puis hasard cryptographique
+ *   réel entre les 2 cases rouges au dernier tour
+ * - Animation plein écran : la couleur de la case gagnante envahit tout l'écran
+ *   avant la révélation du texte du lot
+ * - Physique réaliste des clous dorés qui percutent le clapet supérieur + audio
  * ============================================================================
  */
 
 import { DEFAULT_WHEEL_SEGMENTS } from '../data/calendarData.js';
+import {
+    POINTER_TOP_ANGLE,
+    createWheelSessionState,
+    resolveNextSpinOutcome,
+    computeTargetSpinTrajectory,
+    sampleSpinCurve,
+    formatRemainingTurnsText,
+    getRevealKickerText,
+    getRevealStatusText
+} from '../logic/luckyWheelLogic.js';
 import {
     getCryptoRandomFloat,
     clamp,
     createOrResumeAudioContext,
     closeAudioContextSafely
 } from '../utils/helpers.js';
-import { stopActiveGame, markGameWon } from '../logic/state.js';
+import { stopActiveGame, markGameWon, saveAndSyncQuizAnswer } from '../logic/state.js';
 import {
     fsWheelOverlay,
     fsWheelCloseBtn,
     wheelCanvas,
-    wheelSpinBtn
+    wheelSpinBtn,
+    wheelTurnsCounter,
+    wheelSummary,
+    wheelRevealOverlay,
+    wheelRevealParticles,
+    wheelRevealKicker,
+    wheelRevealTitle,
+    wheelRevealSubtext,
+    wheelRevealBtn
 } from './dom.js';
 
 const WHEEL_SPARKLE_PALETTE = ['#C59B5F', '#FAF0D4', '#9E2A2B', '#1E352B', '#E8D5B5'];
-const STOP_CHIME_NOTES = [523.25, 659.25, 783.99, 1046.5];
+const WHITE_CHIME_NOTES = [523.25, 659.25, 783.99];
+const GREEN_CHIME_NOTES = [523.25, 659.25, 783.99, 1046.5];
+const RED_FANFARE_NOTES = [440.0, 554.37, 659.25, 880.0, 1108.73, 1318.51];
 const CLAPPER_SPRING_K = 260;
 const CLAPPER_DAMPING = 18;
-const POINTER_TOP_ANGLE = -Math.PI / 2;
+const REVEAL_FLOOD_DELAY_MS = 520;
+const REVEAL_TEXT_DELAY_MS = 460;
 
 let activeWheelCleanup = null;
 
@@ -41,6 +63,11 @@ export function closeFullscreenLuckyWheel() {
     if (fsWheelOverlay) {
         fsWheelOverlay.classList.remove('active');
         fsWheelOverlay.setAttribute('aria-hidden', 'true');
+        delete fsWheelOverlay.dataset.wheelStep;
+        delete fsWheelOverlay.dataset.turnsRemaining;
+        delete fsWheelOverlay.dataset.wheelState;
+        delete fsWheelOverlay.dataset.lastPrizeId;
+        delete fsWheelOverlay.dataset.lastPrizeColor;
     }
 }
 
@@ -70,12 +97,12 @@ export function launchFullscreenLuckyWheel(item) {
     const numPegs = numSegments * 2; // 16 clous dorés autour de la jante
     const pegStepAngle = (Math.PI * 2) / numPegs;
 
-    let size = 320;
+    let size = 318;
     const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
 
     function resizeWheelCanvas() {
         const rect = wheelCanvas.getBoundingClientRect();
-        size = Math.max(260, Math.round(Math.min(rect.width || 320, rect.height || 320)));
+        size = Math.max(250, Math.round(Math.min(rect.width || 318, rect.height || 318)));
         wheelCanvas.width = size * dpr;
         wheelCanvas.height = size * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -83,10 +110,15 @@ export function launchFullscreenLuckyWheel(item) {
     resizeWheelCanvas();
     window.addEventListener('resize', resizeWheelCanvas);
 
+    // État de la partie (3 tours imposés puis hasard final rouge)
+    let sessionState = createWheelSessionState();
+    let activeSpin = null; // { outcome, startAngle, totalDelta, durationSec, elapsedSec }
+    let wheelState = 'idle'; // 'idle' | 'spinning' | 'revealing' | 'finished'
+    let lastSegment = null;
+
     // État physique de la roue et du clapet supérieur
     let wheelAngle = getCryptoRandomFloat() * Math.PI * 2;
-    let wheelOmega = 0; // Vitesse angulaire (rad/s)
-    let isSpinning = false;
+    let wheelOmega = 0;
     let isDragging = false;
     let dragLastPointerAngle = 0;
     let dragLastTime = 0;
@@ -101,10 +133,123 @@ export function launchFullscreenLuckyWheel(item) {
     let winningSegmentIndex = -1;
     let winGlowPulse = 0;
     const sparkles = [];
+    const pendingTimeouts = new Set();
 
-    wheelSpinBtn.disabled = false;
+    function scheduleTimeout(fn, ms) {
+        const id = setTimeout(() => {
+            pendingTimeouts.delete(id);
+            fn();
+        }, ms);
+        pendingTimeouts.add(id);
+        return id;
+    }
 
-    // Synthèse sonore Web Audio API : cliquetis horloger / bois & laiton à chaque clou + carillon doux à l'arrêt
+    function clearPendingTimeouts() {
+        pendingTimeouts.forEach((id) => clearTimeout(id));
+        pendingTimeouts.clear();
+    }
+
+    function syncWheelDataAttributes() {
+        fsWheelOverlay.dataset.wheelStep = String(sessionState.spinCount);
+        fsWheelOverlay.dataset.turnsRemaining = String(sessionState.turnsRemaining);
+        fsWheelOverlay.dataset.wheelState = wheelState;
+        fsWheelOverlay.dataset.lastPrizeId = lastSegment ? lastSegment.id : '';
+        fsWheelOverlay.dataset.lastPrizeColor = lastSegment ? lastSegment.colorType : '';
+    }
+
+    function updateTurnsCounterDisplay(animate = false, isBonus = false) {
+        if (!wheelTurnsCounter) return;
+        wheelTurnsCounter.textContent = formatRemainingTurnsText(sessionState.turnsRemaining);
+        wheelTurnsCounter.classList.toggle('is-bonus', Boolean(isBonus && sessionState.turnsRemaining > 0));
+        wheelTurnsCounter.classList.toggle('is-done', sessionState.turnsRemaining <= 0);
+        if (animate) {
+            wheelTurnsCounter.classList.remove('is-updated');
+            void wheelTurnsCounter.offsetWidth;
+            wheelTurnsCounter.classList.add('is-updated');
+            scheduleTimeout(() => {
+                wheelTurnsCounter.classList.remove('is-updated');
+            }, 340);
+        }
+    }
+
+    function renderFinishedSummary() {
+        if (!wheelSummary) return;
+        if (!sessionState.finished || sessionState.wonPrizes.length === 0) {
+            wheelSummary.hidden = true;
+            wheelSummary.innerHTML = '';
+            return;
+        }
+        const itemsHtml = sessionState.wonPrizes
+            .map((prize) => {
+                const cls = prize.colorType === 'red'
+                    ? 'wheel-summary-item wheel-summary-item--red'
+                    : 'wheel-summary-item';
+                return `<li class="${cls}">${prize.prizeText}</li>`;
+            })
+            .join('');
+        wheelSummary.innerHTML = `
+            <p class="wheel-summary-heading">Tes lots gagnés</p>
+            <ul class="wheel-summary-list">${itemsHtml}</ul>
+        `;
+        wheelSummary.hidden = false;
+    }
+
+    function updateSpinControls() {
+        const locked = wheelState !== 'idle' || sessionState.finished;
+        wheelCanvas.classList.toggle('is-locked', locked);
+        if (sessionState.finished) {
+            wheelSpinBtn.disabled = false;
+            wheelSpinBtn.textContent = 'Fermer';
+        } else {
+            wheelSpinBtn.disabled = wheelState !== 'idle';
+            wheelSpinBtn.textContent = 'Tourner la roue ✨';
+        }
+    }
+
+    function resetRevealOverlay() {
+        if (!wheelRevealOverlay) return;
+        wheelRevealOverlay.classList.remove('flooding', 'revealed');
+        wheelRevealOverlay.setAttribute('aria-hidden', 'true');
+        if (wheelRevealParticles) {
+            wheelRevealParticles.innerHTML = '';
+        }
+    }
+
+    function populateRevealParticles(colorType) {
+        if (!wheelRevealParticles) return;
+        wheelRevealParticles.innerHTML = '';
+        const count = colorType === 'red' ? 28 : (colorType === 'green' ? 14 : 10);
+        const colors = colorType === 'white'
+            ? ['#C59B5F', '#D9B87A', '#9E2A2B']
+            : ['#FAF0D4', '#F3D99B', '#FFFFFF'];
+
+        for (let i = 0; i < count; i++) {
+            const dot = document.createElement('span');
+            dot.className = 'wheel-reveal-spark';
+            const sizePx = colorType === 'red' ? (4 + Math.random() * 6) : (3 + Math.random() * 4);
+            dot.style.width = `${sizePx.toFixed(1)}px`;
+            dot.style.height = `${sizePx.toFixed(1)}px`;
+            dot.style.left = `${(6 + Math.random() * 88).toFixed(1)}%`;
+            const topBand = i % 2 === 0
+                ? (12 + Math.random() * 20)
+                : (70 + Math.random() * 22);
+            dot.style.top = `${topBand.toFixed(1)}%`;
+            dot.style.background = colors[i % colors.length];
+            dot.style.setProperty('--spark-dur', `${(2.2 + Math.random() * 2.0).toFixed(2)}s`);
+            dot.style.setProperty('--spark-delay', `${(Math.random() * 1.4).toFixed(2)}s`);
+            dot.style.setProperty('--spark-dx', `${((Math.random() - 0.5) * 48).toFixed(0)}px`);
+            wheelRevealParticles.appendChild(dot);
+        }
+    }
+
+    // Initialisation propre de l'interface
+    resetRevealOverlay();
+    renderFinishedSummary();
+    updateTurnsCounterDisplay(false, false);
+    updateSpinControls();
+    syncWheelDataAttributes();
+
+    // Synthèse sonore Web Audio API : cliquetis horloger + carillon adapté à la couleur gagnante
     let audioCtx = null;
 
     function ensureWheelAudio() {
@@ -117,9 +262,8 @@ export function launchFullscreenLuckyWheel(item) {
         if (!ac) return;
         try {
             const now = ac.currentTime;
-            const normSpeed = Math.min(1, speedAbs / 18);
+            const normSpeed = Math.min(1, speedAbs / 20);
 
-            // 1. Impact boisé/mat du clapet (triangle court)
             const osc = ac.createOscillator();
             const gain = ac.createGain();
             osc.type = 'triangle';
@@ -136,7 +280,6 @@ export function launchFullscreenLuckyWheel(item) {
             osc.start(now);
             osc.stop(now + 0.035);
 
-            // 2. Légère résonance métallique dorée (clou en laiton)
             const ping = ac.createOscillator();
             const pingGain = ac.createGain();
             ping.type = 'sine';
@@ -153,25 +296,32 @@ export function launchFullscreenLuckyWheel(item) {
         }
     }
 
-    function playWheelStopChime() {
+    function playWheelWinChime(colorType) {
         const ac = ensureWheelAudio();
         if (!ac) return;
         try {
-            STOP_CHIME_NOTES.forEach((freq, idx) => {
-                const start = ac.currentTime + idx * 0.075;
+            const notes = colorType === 'red'
+                ? RED_FANFARE_NOTES
+                : (colorType === 'green' ? GREEN_CHIME_NOTES : WHITE_CHIME_NOTES);
+            const stepDelay = colorType === 'red' ? 0.08 : 0.075;
+            const peakVol = colorType === 'red' ? 0.1 : 0.075;
+            const tailSec = colorType === 'red' ? 1.25 : 0.75;
+
+            notes.forEach((freq, idx) => {
+                const start = ac.currentTime + idx * stepDelay;
                 const osc = ac.createOscillator();
                 const gain = ac.createGain();
-                osc.type = 'sine';
+                osc.type = colorType === 'red' ? 'triangle' : 'sine';
                 osc.frequency.setValueAtTime(freq, start);
 
                 gain.gain.setValueAtTime(0.001, start);
-                gain.gain.linearRampToValueAtTime(0.075, start + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.0008, start + 0.75);
+                gain.gain.linearRampToValueAtTime(peakVol, start + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0008, start + tailSec);
 
                 osc.connect(gain);
                 gain.connect(ac.destination);
                 osc.start(start);
-                osc.stop(start + 0.8);
+                osc.stop(start + tailSec + 0.05);
             });
         } catch {
             // Ignore
@@ -179,10 +329,10 @@ export function launchFullscreenLuckyWheel(item) {
     }
 
     function spawnWinSparkles(cx, cy, r) {
-        for (let i = 0; i < 34; i++) {
-            const angle = POINTER_TOP_ANGLE + (Math.random() - 0.5) * 1.4;
+        for (let i = 0; i < 38; i++) {
+            const angle = POINTER_TOP_ANGLE + (Math.random() - 0.5) * 1.5;
             const dist = r * (0.25 + Math.random() * 0.65);
-            const spd = 25 + Math.random() * 75;
+            const spd = 28 + Math.random() * 82;
             sparkles.push({
                 x: cx + Math.cos(angle) * dist,
                 y: cy + Math.sin(angle) * dist,
@@ -190,33 +340,100 @@ export function launchFullscreenLuckyWheel(item) {
                 vy: Math.sin(angle) * spd - 20,
                 size: 2.2 + Math.random() * 3.2,
                 color: WHEEL_SPARKLE_PALETTE[Math.floor(Math.random() * WHEEL_SPARKLE_PALETTE.length)],
-                life: 0.85 + Math.random() * 0.5
+                life: 0.9 + Math.random() * 0.5
             });
         }
     }
 
-    // Lance la roue avec une impulsion véritablement aléatoire (cryptographique)
-    function triggerRandomSpin(direction = 1, baseImpulse = 0) {
+    function showFullScreenPrizeReveal(outcome) {
+        const seg = outcome.segment;
+        const turnsAfter = outcome.nextState.turnsRemaining;
+        wheelState = 'revealing';
+        syncWheelDataAttributes();
+
+        wheelRevealOverlay.dataset.theme = seg.colorType;
+        wheelRevealKicker.textContent = getRevealKickerText(seg);
+        wheelRevealTitle.textContent = seg.prizeText;
+        wheelRevealSubtext.textContent = getRevealStatusText(seg, turnsAfter);
+        wheelRevealBtn.textContent = outcome.nextState.finished
+            ? 'Garder mon lot'
+            : (seg.consumesTurn ? 'Retour à la roue' : 'Rejouer');
+
+        populateRevealParticles(seg.colorType);
+        wheelRevealOverlay.setAttribute('aria-hidden', 'false');
+
+        // Phase 1 : la couleur de la case gagnante envahit tout l'écran
+        requestAnimationFrame(() => {
+            wheelRevealOverlay.classList.add('flooding');
+        });
+
+        // Phase 2 : une fois l'écran rempli de la couleur gagnante, le texte du lot apparaît
+        scheduleTimeout(() => {
+            wheelRevealOverlay.classList.add('revealed');
+        }, REVEAL_TEXT_DELAY_MS);
+    }
+
+    wheelRevealBtn.onclick = () => {
+        if (wheelState !== 'revealing') return;
+        wheelRevealOverlay.classList.remove('revealed');
+        wheelRevealOverlay.classList.remove('flooding');
+        wheelRevealOverlay.setAttribute('aria-hidden', 'true');
+
+        const wasBonus = lastSegment && !lastSegment.consumesTurn;
+        wheelState = sessionState.finished ? 'finished' : 'idle';
+        updateTurnsCounterDisplay(true, wasBonus);
+        renderFinishedSummary();
+        updateSpinControls();
+        syncWheelDataAttributes();
+    };
+
+    // Lance un tour dirigé (ou aléatoire rouge au dernier tour) avec physique fluide
+    function triggerControlledSpin(direction = 1, baseImpulse = 0) {
+        if (wheelState !== 'idle' || sessionState.finished) return;
+
+        const outcome = resolveNextSpinOutcome(sessionState, segments, getCryptoRandomFloat());
+        if (!outcome) return;
+
         ensureWheelAudio();
         winningSegmentIndex = -1;
         winGlowPulse = 0;
 
-        // Vitesse initiale aléatoire entre 15.5 et 25.5 rad/s + bruit cryptographique fin
-        const r1 = getCryptoRandomFloat();
-        const r2 = getCryptoRandomFloat();
-        const randomOmega = 16.0 + r1 * 9.5 + r2 * 2.2 + Math.min(6, Math.abs(baseImpulse) * 0.25);
+        // Position naturelle variée à l'intérieur de la case cible (évite les clous de bordure)
+        const offsetRatio = 0.25 + getCryptoRandomFloat() * 0.5;
+        const extraRotations = Math.min(7, 5 + Math.floor(getCryptoRandomFloat() * 2) + (Math.abs(baseImpulse) > 8 ? 1 : 0));
+        const trajectory = computeTargetSpinTrajectory(
+            wheelAngle,
+            outcome.segmentIndex,
+            numSegments,
+            direction,
+            offsetRatio,
+            extraRotations
+        );
+        const durationSec = 4.35 + getCryptoRandomFloat() * 0.65;
 
-        wheelOmega = (direction >= 0 ? 1 : -1) * randomOmega;
-        isSpinning = true;
-        wheelSpinBtn.disabled = true;
+        activeSpin = {
+            outcome,
+            startAngle: trajectory.startAngle,
+            totalDelta: trajectory.totalDelta,
+            durationSec,
+            startedAtMs: performance.now()
+        };
+
+        wheelState = 'spinning';
+        updateSpinControls();
+        syncWheelDataAttributes();
     }
 
     wheelSpinBtn.onclick = () => {
-        if (isSpinning) return;
-        triggerRandomSpin(1, 0);
+        if (sessionState.finished) {
+            closeFullscreenLuckyWheel();
+            return;
+        }
+        if (wheelState !== 'idle') return;
+        triggerControlledSpin(1, 0);
     };
 
-    // Interaction directe au doigt / souris sur la roue (tourner manuellement et lancer d'un coup de doigt)
+    // Interaction directe au doigt / souris sur la roue (glisser-lancer fluide)
     function getPointerAngleFromCenter(clientX, clientY) {
         const rect = wheelCanvas.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
@@ -225,10 +442,9 @@ export function launchFullscreenLuckyWheel(item) {
     }
 
     const onPointerDown = (clientX, clientY) => {
-        if (isSpinning && Math.abs(wheelOmega) > 3.5) return;
+        if (wheelState !== 'idle' || sessionState.finished) return;
         ensureWheelAudio();
         isDragging = true;
-        isSpinning = false;
         winningSegmentIndex = -1;
         wheelOmega = 0;
         smoothedDragOmega = 0;
@@ -237,7 +453,7 @@ export function launchFullscreenLuckyWheel(item) {
     };
 
     const onPointerMove = (clientX, clientY) => {
-        if (!isDragging) return;
+        if (!isDragging || wheelState !== 'idle') return;
         const now = performance.now();
         const dt = Math.max(0.004, (now - dragLastTime) / 1000);
         const curAngle = getPointerAngleFromCenter(clientX, clientY);
@@ -256,9 +472,9 @@ export function launchFullscreenLuckyWheel(item) {
     const onPointerUp = () => {
         if (!isDragging) return;
         isDragging = false;
-        if (Math.abs(smoothedDragOmega) > 1.3) {
+        if (wheelState === 'idle' && Math.abs(smoothedDragOmega) > 1.3) {
             const dir = smoothedDragOmega >= 0 ? 1 : -1;
-            triggerRandomSpin(dir, smoothedDragOmega);
+            triggerControlledSpin(dir, smoothedDragOmega);
         }
     };
 
@@ -282,11 +498,6 @@ export function launchFullscreenLuckyWheel(item) {
     wheelCanvas.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
-
-    function getSegmentUnderPointer(angle) {
-        const rel = ((POINTER_TOP_ANGLE - angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-        return Math.floor(rel / sliceAngle) % numSegments;
-    }
 
     function drawWheelScene() {
         ctx.clearRect(0, 0, size, size);
@@ -324,7 +535,6 @@ export function launchFullscreenLuckyWheel(item) {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Filet intérieur de la couronne dorée
         ctx.strokeStyle = '#1E352B';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -351,7 +561,6 @@ export function launchFullscreenLuckyWheel(item) {
             ctx.fillStyle = seg.color;
             ctx.fill();
 
-            // Légère patine radiale pour donner du relief à chaque quartier
             const sliceGrad = ctx.createRadialGradient(0, 0, hubRadius, 0, 0, rimInnerRadius);
             sliceGrad.addColorStop(0, 'rgba(0, 0, 0, 0.08)');
             sliceGrad.addColorStop(0.65, 'rgba(255, 255, 255, 0)');
@@ -359,14 +568,12 @@ export function launchFullscreenLuckyWheel(item) {
             ctx.fillStyle = sliceGrad;
             ctx.fill();
 
-            // Si c'est le quartier gagnant à l'arrêt : douce lueur dorée
             if (i === winningSegmentIndex) {
-                const highlightAlpha = 0.22 + 0.12 * Math.sin(winGlowPulse * 5);
+                const highlightAlpha = 0.25 + 0.14 * Math.sin(winGlowPulse * 5.5);
                 ctx.fillStyle = `rgba(255, 232, 175, ${highlightAlpha})`;
                 ctx.fill();
             }
 
-            // Filet doré séparateur entre les quartiers
             ctx.strokeStyle = '#C59B5F';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -374,26 +581,18 @@ export function launchFullscreenLuckyWheel(item) {
             ctx.lineTo(Math.cos(startA) * (rimInnerRadius - 1), Math.sin(startA) * (rimInnerRadius - 1));
             ctx.stroke();
 
-            // Fin liseré d'arche dorée et petite étoile filigranée dans chaque quartier
+            // Petite étoile filigranée (les lots restent secrets jusqu'à l'arrêt pour garder le suspense)
             ctx.save();
             ctx.rotate(midA);
-            const isDarkSlice = seg.color === '#1E352B' || seg.color === '#9E2A2B';
-            ctx.fillStyle = isDarkSlice ? 'rgba(232, 213, 181, 0.72)' : 'rgba(197, 155, 95, 0.78)';
-            ctx.font = '10px Georgia, serif';
+            const isDarkSlice = seg.colorType === 'green' || seg.colorType === 'red';
+            ctx.fillStyle = isDarkSlice ? 'rgba(232, 213, 181, 0.78)' : 'rgba(197, 155, 95, 0.82)';
+            ctx.font = '11px Georgia, serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('✦', rimInnerRadius - 18, 0);
-
-            if (seg.label) {
-                ctx.fillStyle = seg.textColor || (isDarkSlice ? '#FAF7F2' : '#1A211E');
-                ctx.font = '600 13px Cormorant Garamond, Georgia, serif';
-                ctx.textAlign = 'right';
-                ctx.fillText(seg.label, rimInnerRadius - 30, 0);
-            }
+            ctx.fillText('✦', rimInnerRadius - 20, 0);
             ctx.restore();
         }
 
-        // Filet circulaire intérieur gravé près du bord des quartiers
         ctx.strokeStyle = 'rgba(197, 155, 95, 0.45)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -457,7 +656,6 @@ export function launchFullscreenLuckyWheel(item) {
         ctx.arc(0, 0, hubRadius - 7.5, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Étoile centrale dorée qui tourne doucement avec la roue
         ctx.rotate(wheelAngle * 0.5);
         ctx.fillStyle = '#FAF0D4';
         ctx.beginPath();
@@ -478,7 +676,6 @@ export function launchFullscreenLuckyWheel(item) {
         ctx.translate(pivotX, pivotY);
         ctx.rotate(clapperAngle);
 
-        // Ombre du clapet
         ctx.fillStyle = 'rgba(26, 33, 30, 0.25)';
         ctx.beginPath();
         ctx.moveTo(-9, -2);
@@ -487,7 +684,6 @@ export function launchFullscreenLuckyWheel(item) {
         ctx.closePath();
         ctx.fill();
 
-        // Corps du clapet (bordeaux & bordure or)
         ctx.fillStyle = '#9E2A2B';
         ctx.strokeStyle = '#FAF0D4';
         ctx.lineWidth = 1.8;
@@ -499,7 +695,6 @@ export function launchFullscreenLuckyWheel(item) {
         ctx.fill();
         ctx.stroke();
 
-        // Rivet supérieur en or
         ctx.fillStyle = '#C59B5F';
         ctx.beginPath();
         ctx.arc(0, -3, 5.5, 0, Math.PI * 2);
@@ -530,23 +725,47 @@ export function launchFullscreenLuckyWheel(item) {
         const dt = clamp((now - lastFrameTime) / 1000, 0.001, 0.04);
         lastFrameTime = now;
 
-        if (isSpinning && !isDragging) {
-            wheelAngle += wheelOmega * dt;
+        if (activeSpin && !isDragging) {
+            const elapsedSec = Math.max(0, (now - activeSpin.startedAtMs) / 1000);
+            const progress = clamp(elapsedSec / activeSpin.durationSec, 0, 1);
+            const sample = sampleSpinCurve(
+                activeSpin.startAngle,
+                activeSpin.totalDelta,
+                progress,
+                activeSpin.durationSec
+            );
 
-            // Frottement fluide et progressif (longue décélération pleine de suspense)
-            const speed = Math.abs(wheelOmega);
-            const dragCoeff = speed > 4 ? 0.52 : (speed > 1.2 ? 0.68 : 0.95);
-            wheelOmega *= Math.exp(-dragCoeff * dt);
+            wheelAngle = sample.angle;
+            wheelOmega = sample.omega;
 
-            // Ralentissement supplémentaire dû à la résistance mécanique des clous à basse vitesse
-            if (speed < 0.22) {
+            if (sample.done) {
+                const finishedOutcome = activeSpin.outcome;
+                activeSpin = null;
                 wheelOmega = 0;
-                isSpinning = false;
-                wheelSpinBtn.disabled = false;
-                winningSegmentIndex = getSegmentUnderPointer(wheelAngle);
-                playWheelStopChime();
+
+                winningSegmentIndex = finishedOutcome.segmentIndex;
+                lastSegment = finishedOutcome.segment;
+                sessionState = finishedOutcome.nextState;
+
+                playWheelWinChime(lastSegment.colorType);
                 spawnWinSparkles(size / 2, size / 2 + 8, size * 0.43);
-                markGameWon(item.day);
+
+                if (sessionState.finished) {
+                    markGameWon(item.day);
+                    saveAndSyncQuizAnswer(
+                        `roue_chance_jour_${item.day}`,
+                        `La Roue de la Chance (Jour ${item.day})`,
+                        lastSegment.prizeText,
+                        `Lots gagnés : ${sessionState.wonPrizes.map((p) => p.prizeText).join(' • ')}`
+                    );
+                }
+
+                syncWheelDataAttributes();
+
+                // Courte pause sur la case gagnante illuminée avant la vague de couleur plein écran
+                scheduleTimeout(() => {
+                    showFullScreenPrizeReveal(finishedOutcome);
+                }, REVEAL_FLOOD_DELAY_MS);
             }
         }
 
@@ -559,11 +778,12 @@ export function launchFullscreenLuckyWheel(item) {
             const spinDir = (isDragging ? smoothedDragOmega : wheelOmega) >= 0 ? 1 : -1;
             const kickStrength = Math.min(0.62, 0.16 + (currentSpeed / 22) * 0.46);
 
-            // Le clapet est poussé dans le sens de rotation de la roue
             clapperAngle = -spinDir * kickStrength;
             clapperOmega = -spinDir * currentSpeed * 0.35;
 
-            playPegClickSound(currentSpeed);
+            if (currentSpeed > 0.08) {
+                playPegClickSound(currentSpeed);
+            }
             if (navigator.vibrate && currentSpeed > 0.5) {
                 navigator.vibrate(5);
             }
@@ -597,8 +817,18 @@ export function launchFullscreenLuckyWheel(item) {
     animId = requestAnimationFrame(stepWheel);
 
     activeWheelCleanup = () => {
+        clearPendingTimeouts();
         cancelAnimationFrame(animId);
         closeAudioContextSafely(audioCtx);
+        resetRevealOverlay();
+        if (wheelSummary) {
+            wheelSummary.hidden = true;
+            wheelSummary.innerHTML = '';
+        }
+        wheelSpinBtn.onclick = null;
+        if (wheelRevealBtn) {
+            wheelRevealBtn.onclick = null;
+        }
         window.removeEventListener('resize', resizeWheelCanvas);
         wheelCanvas.removeEventListener('touchstart', onTouchStart);
         window.removeEventListener('touchmove', onTouchMove);

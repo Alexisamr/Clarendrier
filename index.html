@@ -419,17 +419,33 @@
 
                 <div class="wheel-header">
                     <h2 class="wheel-title">La Roue de la Chance</h2>
+                    <p class="wheel-turns-counter" id="wheel-turns-counter" aria-live="polite">Il te reste 3 tours</p>
                 </div>
 
                 <div class="wheel-canvas-wrap" id="wheel-canvas-wrap">
                     <canvas id="wheel-canvas" class="wheel-canvas"></canvas>
                 </div>
 
+                <div class="wheel-summary" id="wheel-summary" hidden></div>
+
                 <div class="wheel-controls">
                     <button type="button" class="btn-sober wheel-spin-btn" id="wheel-spin-btn">
                         Tourner la roue ✨
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Animation Plein Écran de révélation du lot (couleur gagnante puis texte) -->
+        <div class="wheel-reveal-overlay" id="wheel-reveal-overlay" aria-hidden="true" data-theme="white">
+            <div class="wheel-reveal-flood" id="wheel-reveal-flood" aria-hidden="true"></div>
+            <div class="wheel-reveal-particles" id="wheel-reveal-particles" aria-hidden="true"></div>
+            <div class="wheel-reveal-content">
+                <p class="wheel-reveal-kicker" id="wheel-reveal-kicker"></p>
+                <div class="wheel-reveal-ornament" aria-hidden="true"><span></span>✦<span></span></div>
+                <h3 class="wheel-reveal-title" id="wheel-reveal-title"></h3>
+                <p class="wheel-reveal-subtext" id="wheel-reveal-subtext"></p>
+                <button type="button" class="wheel-reveal-btn" id="wheel-reveal-btn">Retour à la roue</button>
             </div>
         </div>
     </div>

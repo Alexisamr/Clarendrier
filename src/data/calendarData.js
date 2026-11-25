@@ -17,6 +17,8 @@
    1. MODE DÉVELOPPEUR & DATES DU CALENDRIER
    - Passe DEV_MODE à `false` avant de lui offrir le site en décembre.
    ------------------------------------------------------------------------- */
+import { WHEEL_SEGMENTS } from '../logic/luckyWheelLogic.js';
+
 export const DEV_MODE = true;
 
 export const CALENDAR_CONFIG = {
@@ -161,38 +163,46 @@ export const GATE_QUESTIONS = [
    - Pour ajouter un nouveau jour (ex: 11), associe-le à une clé de SURPRISES_CATALOG.
    ------------------------------------------------------------------------- */
 export const DAY_ASSIGNMENTS = {
-    1: 'spotify_just_two_of_us', // Jour 1 : Petit mot secret cliquable -> Spotify « Just the Two of Us »
-    2: 'coupon_massage',         // Jour 2 : Ticket à découper « Bon pour un massage de tout le corps »
-    3: 'quiz_ete',               // Jour 3 : Quiz « Tu te souviens de notre été ? »
-    4: 'ferret_dune',            // Jour 4 : Mini-jeu « L'Ascension de la Dune » (Cap Ferret)
-    5: 'coupon_chanson',         // Jour 5 : Ticket à découper « Bon pour une chanson à 2 où JE chante »
-    6: 'scratch_photo_1',        // Jour 6 : Cartes à gratter réalistes avec « image1.png » et « image2.png »
-    7: 'scratch_photo_2',        // Jour 7 : Cartes à gratter réalistes avec « image3.png » et « image4.png »
-    8: 'midnight_swim',          // Jour 8 : Mini-jeu contemplatif « Bain de Minuit & Phytoplancton » (Cap Ferret)
-    9: 'lucky_wheel',            // Jour 9 : Roue de la Chance (vide pour l'instant, dans la DA du site)
-    10: 'coupon_spiderman'       // Jour 10 : Ticket à découper « Bon pour aller voir Spider-Man au ciné »
+    1: 'spotify_just_two_of_us', // Jour 1 : Petit mot surprise -> notre musique à nous deux
+    2: 'physical_chocolats',     // Jour 2 : Cadeau physique (chocolats et bonbons)
+    3: 'quiz_ete',               // Jour 3 : Petit quizz de notre été
+    4: 'coupon_chanson',         // Jour 4 : Bon pour une chanson à 2
+    5: 'ferret_dune',            // Jour 5 : Jeu Ascension de la Dune
+    6: 'physical_portecle',      // Jour 6 : Cadeau physique (porte-clé bracelet fait main)
+    7: 'scratch_photo_1',        // Jour 7 : Les cartes à gratter
+    8: 'physical_ferrero',       // Jour 8 : Cadeau physique (petite boîte de Ferrero Rocher)
+    9: 'coupon_spiderman',       // Jour 9 : Bon pour aller voir Spider-Man
+    11: 'physical_tshirt',       // Jour 11 : Cadeau physique (t-shirt I Love AA)
+    12: 'midnight_swim',         // Jour 12 : Jeu Bain de Minuit au Cap
+    13: 'physical_day13',        // Jour 13 : Case rouge vide
+    14: 'scratch_photo_2',       // Jour 14 : Les autres cartes à gratter
+    16: 'coupon_massage',        // Jour 16 : Bon pour un EENORME massage
+    17: 'physical_bonbons_chocolats', // Jour 17 : Cadeau physique (bonbon / chocolats)
+    19: 'physical_lettre',       // Jour 19 : Cadeau physique (lettre avec photo de nous deux)
+    20: 'lucky_wheel',           // Jour 20 : La Roue de la Chance
+    21: 'physical_bracelet',     // Jour 21 : Cadeau physique (bracelet fait main)
+    24: 'physical_noel_24'       // Jour 24 : Cadeau physique (Lettre malo + photo + JBL Go 4)
 };
 
 /* -------------------------------------------------------------------------
-   6. TEXTE PAR DÉFAUT DES CASES SANS SURPRISE SPÉCIALE (JOURS 11 À 24)
+   6. TEXTE DES CASES VIDES (CHAÎNE VIDE "" PRÊTE À ÊTRE REMPLIE PLUS TARD)
    ------------------------------------------------------------------------- */
+export const EMPTY_DAYS_CONTENT = {
+    10: "",
+    15: "",
+    18: "",
+    22: "",
+    23: ""
+};
+
 export function getDefaultDayContent(day) {
-    return `Voici le petit mot ou l'indice pour la journée du ${day} décembre.`;
+    return EMPTY_DAYS_CONTENT[day] ?? "";
 }
 
 /* -------------------------------------------------------------------------
    7. CATALOGUE COMPLET DES SURPRISES INTERCHANGEABLES
    ------------------------------------------------------------------------- */
-export const DEFAULT_WHEEL_SEGMENTS = [
-    { label: "", color: "#1E352B", textColor: "#FAF7F2" },
-    { label: "", color: "#FAF7F2", textColor: "#1A211E" },
-    { label: "", color: "#9E2A2B", textColor: "#FAF7F2" },
-    { label: "", color: "#F2EAE0", textColor: "#1A211E" },
-    { label: "", color: "#1E352B", textColor: "#FAF7F2" },
-    { label: "", color: "#FAF7F2", textColor: "#1A211E" },
-    { label: "", color: "#9E2A2B", textColor: "#FAF7F2" },
-    { label: "", color: "#F2EAE0", textColor: "#1A211E" }
-];
+export const DEFAULT_WHEEL_SEGMENTS = WHEEL_SEGMENTS;
 
 export const SURPRISES_CATALOG = {
     scratch_photo_1: {
@@ -259,9 +269,9 @@ export const SURPRISES_CATALOG = {
         game: "coupon",
         theme: "red",
         gameTitle: "Bon Cadeau",
-        couponTitle: "Bon pour un massage de tout le corps",
+        couponTitle: "Bon pour un EENORME massage",
         couponClause: "",
-        content: "Bon pour un massage de tout le corps"
+        content: "Bon pour un EENORME massage"
     },
 
     coupon_chanson: {
@@ -378,6 +388,75 @@ export const SURPRISES_CATALOG = {
         gameSubtitle: "",
         content: "",
         segments: DEFAULT_WHEEL_SEGMENTS
+    },
+
+    physical_chocolats: {
+        giftKind: "physical",
+        game: null,
+        cardNote: "à faire",
+        physicalTitle: "Chocolats et bonbons",
+        content: "Cadeau physique : chocolats et bonbons"
+    },
+
+    physical_portecle: {
+        giftKind: "physical",
+        game: null,
+        cardNote: "à faire",
+        physicalTitle: "Porte-clé bracelet fait main",
+        content: "Cadeau physique : porte-clé bracelet fait main"
+    },
+
+    physical_ferrero: {
+        giftKind: "physical",
+        game: null,
+        physicalTitle: "Petite boîte de Ferrero Rocher",
+        content: "Cadeau physique : petite boîte de Ferrero Rocher"
+    },
+
+    physical_tshirt: {
+        giftKind: "physical",
+        game: null,
+        physicalTitle: "T-shirt I Love AA",
+        content: "Cadeau physique : t-shirt I Love AA"
+    },
+
+    physical_day13: {
+        giftKind: "physical",
+        game: null,
+        cardNote: "vide",
+        content: ""
+    },
+
+    physical_bonbons_chocolats: {
+        giftKind: "physical",
+        game: null,
+        cardNote: "à faire",
+        physicalTitle: "Bonbon / chocolats",
+        content: "Cadeau physique : bonbon / chocolats"
+    },
+
+    physical_bracelet: {
+        giftKind: "physical",
+        game: null,
+        cardNote: "à faire",
+        physicalTitle: "Bracelet fait main",
+        content: "Cadeau physique : bracelet fait main"
+    },
+
+    physical_lettre: {
+        giftKind: "physical",
+        game: null,
+        cardNote: "à faire",
+        physicalTitle: "Lettre avec photo de nous deux",
+        content: "Cadeau physique : lettre avec photo de nous deux"
+    },
+
+    physical_noel_24: {
+        giftKind: "physical",
+        game: null,
+        cardNote: "à faire",
+        physicalTitle: "Lettre malo + photo de nous deux avec dedans 3 raison de pourquoi je t'aime (et enfaite y'en a partout dans la carte) + (jbl go 4)",
+        content: "Lettre malo + photo de nous deux avec dedans 3 raison de pourquoi je t'aime (et enfaite y'en a partout dans la carte) + (jbl go 4)"
     }
 };
 
@@ -427,16 +506,22 @@ export const calendarData = Array.from({ length: CALENDAR_CONFIG.TOTAL_DAYS }, (
     const assignedKey = DAY_ASSIGNMENTS[day];
 
     if (assignedKey && SURPRISES_CATALOG[assignedKey]) {
+        const entry = SURPRISES_CATALOG[assignedKey];
         return {
             day,
             surpriseKey: assignedKey,
-            ...SURPRISES_CATALOG[assignedKey]
+            giftKind: entry.giftKind || 'app',
+            isEmpty: false,
+            ...entry
         };
     }
 
     return {
         day: day,
         game: null,
+        giftKind: 'empty',
+        isEmpty: true,
+        cardNote: 'vide',
         content: getDefaultDayContent(day)
     };
 });

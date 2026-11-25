@@ -93,9 +93,32 @@
     margin: 0;
 }
 
+.wheel-turns-counter {
+    margin: 6px 0 0;
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    font-weight: 500;
+    letter-spacing: 0.015em;
+    color: #9E2A2B;
+    font-variant-numeric: tabular-nums;
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), color 0.24s ease;
+}
+
+.wheel-turns-counter.is-updated {
+    transform: scale(1.08);
+}
+
+.wheel-turns-counter.is-bonus {
+    color: #1E352B;
+}
+
+.wheel-turns-counter.is-done {
+    color: var(--text-secondary);
+}
+
 .wheel-canvas-wrap {
     position: relative;
-    width: min(100%, 330px);
+    width: min(100%, 318px);
     aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
@@ -118,6 +141,51 @@
     cursor: grabbing;
 }
 
+.wheel-canvas.is-locked {
+    cursor: default;
+}
+
+.wheel-summary {
+    width: 100%;
+    max-width: 310px;
+    margin: 2px 0 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(197, 155, 95, 0.32);
+    text-align: center;
+}
+
+.wheel-summary-heading {
+    margin: 0 0 6px;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9E7336;
+}
+
+.wheel-summary-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.wheel-summary-item {
+    font-family: var(--font-serif);
+    font-size: 0.98rem;
+    line-height: 1.28;
+    color: var(--text-primary);
+    text-wrap: balance;
+}
+
+.wheel-summary-item--red {
+    color: #9E2A2B;
+    font-weight: 600;
+}
+
 .wheel-controls {
     width: 100%;
     display: flex;
@@ -136,3 +204,308 @@
     opacity: 0.55;
     cursor: not-allowed;
 }
+
+/* ============================================================================
+   ANIMATION PLEIN ÉCRAN DE RÉVÉLATION DU LOT (COULEUR GAGNANTE PUIS TEXTE)
+   ============================================================================ */
+
+.wheel-reveal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.wheel-reveal-overlay.flooding,
+.wheel-reveal-overlay.revealed {
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Disque plein écran qui s'étend depuis le centre de la roue pour inonder tout l'écran */
+.wheel-reveal-flood {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 240vmax;
+    height: 240vmax;
+    margin-left: -120vmax;
+    margin-top: -120vmax;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+}
+
+.wheel-reveal-overlay.flooding .wheel-reveal-flood,
+.wheel-reveal-overlay.revealed .wheel-reveal-flood {
+    transform: scale(1);
+}
+
+/* Thèmes de couleurs fidèles à la roue : Blanche, Verte, Rouge */
+.wheel-reveal-overlay[data-theme="white"] .wheel-reveal-flood {
+    background: radial-gradient(circle at 50% 42%, #FFFFFF 0%, #FAF5EC 64%, #EDE2D0 100%);
+}
+
+.wheel-reveal-overlay[data-theme="green"] .wheel-reveal-flood {
+    background: radial-gradient(circle at 50% 42%, #294B3D 0%, #1E352B 64%, #12231C 100%);
+}
+
+.wheel-reveal-overlay[data-theme="red"] .wheel-reveal-flood {
+    background: radial-gradient(circle at 50% 42%, #BD3637 0%, #9E2A2B 62%, #6D1718 100%);
+}
+
+/* Particules dorées douces (principalement pour le grand lot rouge) */
+.wheel-reveal-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+}
+
+.wheel-reveal-overlay.revealed .wheel-reveal-particles {
+    opacity: 1;
+}
+
+.wheel-reveal-spark {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0;
+    animation: wheelSparkFloat var(--spark-dur, 2.8s) ease-out var(--spark-delay, 0s) infinite;
+    will-change: transform, opacity;
+}
+
+@keyframes wheelSparkFloat {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 18px, 0) scale(0.4);
+    }
+    25% {
+        opacity: 0.9;
+    }
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--spark-dx, 0px), -95px, 0) scale(1.1);
+    }
+}
+
+.wheel-reveal-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 440px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.wheel-reveal-kicker,
+.wheel-reveal-ornament,
+.wheel-reveal-title,
+.wheel-reveal-subtext,
+.wheel-reveal-btn {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    transition: opacity 0.48s cubic-bezier(0.16, 1, 0.3, 1), transform 0.56s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
+}
+
+.wheel-reveal-overlay.revealed .wheel-reveal-kicker {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0.04s;
+}
+
+.wheel-reveal-overlay.revealed .wheel-reveal-ornament {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0.12s;
+}
+
+.wheel-reveal-overlay.revealed .wheel-reveal-title {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0.2s;
+}
+
+.wheel-reveal-overlay.revealed .wheel-reveal-subtext {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0.32s;
+}
+
+.wheel-reveal-overlay.revealed .wheel-reveal-btn {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0.44s;
+}
+
+.wheel-reveal-kicker {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 0.88rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+}
+
+.wheel-reveal-ornament {
+    margin: 14px 0 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.95rem;
+}
+
+.wheel-reveal-ornament span {
+    display: block;
+    width: 44px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.45;
+}
+
+.wheel-reveal-title {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: clamp(1.9rem, 6.4vw, 2.85rem);
+    font-weight: 600;
+    line-height: 1.16;
+    text-wrap: balance;
+}
+
+.wheel-reveal-subtext {
+    margin: 18px 0 0;
+    font-family: var(--font-sans);
+    font-size: 0.96rem;
+    font-weight: 400;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+}
+
+.wheel-reveal-btn {
+    margin-top: 32px;
+    min-height: 48px;
+    padding: 12px 30px;
+    border-radius: 999px;
+    border: 1.5px solid transparent;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        opacity 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.wheel-reveal-btn:active {
+    transform: scale(0.96);
+}
+
+.wheel-reveal-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 4px;
+}
+
+/* Couleurs typographiques & boutons haute lisibilité pour chaque thème */
+.wheel-reveal-overlay[data-theme="white"] .wheel-reveal-kicker {
+    color: #8C6429;
+}
+
+.wheel-reveal-overlay[data-theme="white"] .wheel-reveal-ornament {
+    color: #B5894A;
+}
+
+.wheel-reveal-overlay[data-theme="white"] .wheel-reveal-title {
+    color: #1A211E;
+}
+
+.wheel-reveal-overlay[data-theme="white"] .wheel-reveal-subtext {
+    color: #4A5550;
+}
+
+.wheel-reveal-overlay[data-theme="white"] .wheel-reveal-btn {
+    background: #1E352B;
+    color: #FAF7F2;
+    box-shadow: 0 12px 26px -10px rgba(30, 53, 43, 0.45);
+}
+
+.wheel-reveal-overlay[data-theme="green"] .wheel-reveal-kicker {
+    color: #E5C687;
+}
+
+.wheel-reveal-overlay[data-theme="green"] .wheel-reveal-ornament {
+    color: #E5C687;
+}
+
+.wheel-reveal-overlay[data-theme="green"] .wheel-reveal-title {
+    color: #FAF7F2;
+}
+
+.wheel-reveal-overlay[data-theme="green"] .wheel-reveal-subtext {
+    color: rgba(250, 247, 242, 0.84);
+}
+
+.wheel-reveal-overlay[data-theme="green"] .wheel-reveal-btn {
+    background: #FAF7F2;
+    color: #1E352B;
+    box-shadow: 0 14px 28px -10px rgba(0, 0, 0, 0.38);
+}
+
+.wheel-reveal-overlay[data-theme="red"] .wheel-reveal-kicker {
+    color: #F3D99B;
+}
+
+.wheel-reveal-overlay[data-theme="red"] .wheel-reveal-ornament {
+    color: #F3D99B;
+}
+
+.wheel-reveal-overlay[data-theme="red"] .wheel-reveal-title {
+    color: #FFFBF4;
+    text-shadow: 0 4px 24px rgba(55, 10, 10, 0.32);
+}
+
+.wheel-reveal-overlay[data-theme="red"] .wheel-reveal-subtext {
+    color: rgba(255, 250, 240, 0.9);
+}
+
+.wheel-reveal-overlay[data-theme="red"] .wheel-reveal-btn {
+    background: #FAF5EC;
+    color: #7D1D1E;
+    border-color: rgba(243, 217, 155, 0.65);
+    box-shadow: 0 16px 32px -10px rgba(48, 8, 9, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wheel-reveal-flood {
+        transition-duration: 0.15s;
+    }
+
+    .wheel-reveal-kicker,
+    .wheel-reveal-ornament,
+    .wheel-reveal-title,
+    .wheel-reveal-subtext,
+    .wheel-reveal-btn {
+        transition-duration: 0.18s;
+        transition-delay: 0s !important;
+        transform: none;
+    }
+
+    .wheel-reveal-spark {
+        animation: none;
+        display: none;
+    }
+}
+

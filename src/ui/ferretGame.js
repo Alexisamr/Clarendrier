@@ -84,8 +84,46 @@ export function launchFullscreenFerretGame(item) {
     resizeCanvas();
 
     let animId;
-    let isRunning = true;
+    let isRunning = false;
     let altitude = 0; // 0 à 100%
+
+    let countdownEl = fsOverlay.querySelector('.fs-countdown-overlay');
+    if (!countdownEl) {
+        countdownEl = document.createElement('div');
+        countdownEl.className = 'fs-countdown-overlay';
+        countdownEl.innerHTML = `<div class="fs-countdown-number" data-role="countdown-num">3</div>`;
+        fsOverlay.appendChild(countdownEl);
+    } else {
+        countdownEl.innerHTML = `<div class="fs-countdown-number" data-role="countdown-num">3</div>`;
+    }
+    const countNumEl = countdownEl.querySelector('[data-role="countdown-num"]');
+    countdownEl.classList.add('active');
+
+    let countdownTimeouts = [];
+    const steps = [
+        { text: '3', delay: 0 },
+        { text: '2', delay: 1000 },
+        { text: '1', delay: 2000 },
+        { text: 'Go !', delay: 3000 }
+    ];
+
+    steps.forEach((step) => {
+        const tId = setTimeout(() => {
+            if (!countdownEl.classList.contains('active')) return;
+            countNumEl.textContent = step.text;
+            countNumEl.style.animation = 'none';
+            countNumEl.offsetHeight;
+            countNumEl.style.animation = '';
+        }, step.delay);
+        countdownTimeouts.push(tId);
+    });
+
+    const startTimerId = setTimeout(() => {
+        countdownEl.classList.remove('active');
+        isRunning = true;
+        lastTime = performance.now();
+    }, 3900);
+    countdownTimeouts.push(startTimerId);
     let timeLeft = TOTAL_GAME_TIME_SEC;
     let elapsed = 0;
     let lastTime = performance.now();
@@ -1345,6 +1383,10 @@ export function launchFullscreenFerretGame(item) {
     setActiveGameCleanup(() => {
         isRunning = false;
         cancelAnimationFrame(animId);
+        countdownTimeouts.forEach(clearTimeout);
+        if (countdownEl) {
+            countdownEl.classList.remove('active');
+        }
         canvas.removeEventListener('touchstart', onTouchStart);
         canvas.removeEventListener('touchmove', onTouchMove);
         canvas.removeEventListener('mousemove', onMouseMove);

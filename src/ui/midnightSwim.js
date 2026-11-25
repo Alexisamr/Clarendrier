@@ -13,13 +13,24 @@
  */
 
 import { UI_TEXTS } from '../data/calendarData.js';
-import { clamp, closeAudioContextSafely } from '../utils/helpers.js';
+import { clamp } from '../utils/helpers.js';
 import {
     stopActiveGame,
     setActiveGameCleanup,
     markGameWon,
     saveAndSyncQuizAnswer
 } from '../logic/state.js';
+import {
+    HEART_STAR_COUNT,
+    HEART_STAR_ANGLES,
+    getSmoothHeartPoint,
+    getHeartLayout,
+    getHeartStars,
+    sampleHeartArc,
+    evaluateSkyTouch,
+    getConstellationMusicState
+} from '../logic/midnightConstellation.js';
+import { createMidnightAudioEngine } from '../logic/midnightAudio.js';
 import {
     fsOverlay,
     fsTimer,
@@ -32,8 +43,6 @@ import { openModal, closeModal } from './modal.js';
 
 const STAR_PALETTE = ['#FFFFFF', '#FFF8E7', '#CFE8FF', '#FFE6B8', '#B8F2E6'];
 const PLANKTON_COLORS = ['#00F5D4', '#00E5FF', '#48CAE4', '#80FFDB', '#72EFDD'];
-const STARLIGHT_CHIME_NOTES = [523.25, 659.25, 783.99, 880.0, 1046.5, 1318.5];
-const HEART_STAR_ANGLES = [Math.PI, Math.PI * 1.42, Math.PI * 0.58, 0];
 
 const TOTAL_STARS = 260;
 const MILKY_WAY_STARS = 110;
@@ -43,7 +52,8 @@ const PLAYER_MAX_SPEED = 148;
 const MIN_WATER_PLAY_SEC = 1.8;
 const POST_SWIM_HUG_DELAY_SEC = 4.5;
 const STARGAZE_HINT_DELAY_SEC = 10;
-const CONSTELLATION_RETURN_MENU_SEC = 10;
+const CONSTELLATION_RETURN_MENU_SEC = 16;
+const DRAG_STAR_COOLDOWN_MS = 240;
 
 export function launchFullscreenMidnightSwim(item) {
     stopActiveGame();
@@ -141,26 +151,23 @@ export function launchFullscreenMidnightSwim(item) {
     const hugHearts = [];
     let hugHeartTimer = 0;
 
-    // Suivi de la suite : 1) aller jouer dans l'eau, 2) revenir faire un câlin, 3) pause de quelques bonnes secondes, 4) suite sous les étoiles
+    // Suivi de la suite : 1) aller jouer dans l'eau, 2) revenir faire un câlin (musique calme), 3) pause, 4) constellation du cœur sous les étoiles
     let waterPlayTime = 0;
     let hasPlayedInWater = false;
     let postSwimHugTimer = 0;
     let stargazePhase = false;
     let stargazeIdleTimer = 0;
     let constellationProgress = 0;
+    let lastStarLitAtMs = 0;
+    let lastArcDrawProgress = 1;
+    let closingArcProgress = 0;
     let heartRevealBlend = 0;
     let constellationCompletedTimer = 0;
     let finaleShown = false;
+    let climaxTriggered = false;
     const starBursts = [];
-
-    function getSmoothHeartPoint(theta, centerX, centerY, heartScale) {
-        const hx = 16 * Math.pow(Math.sin(theta), 3);
-        const hy = -(13 * Math.cos(theta) - 5 * Math.cos(2 * theta) - 2 * Math.cos(3 * theta) - Math.cos(4 * theta));
-        return {
-            x: centerX + hx * heartScale,
-            y: centerY + hy * heartScale
-        };
-    }
+    const guidingWisps = [];
+    const heartPulseWaves = [];
 
     const keys = { left: false, right: false, up: false, down: false };
     let isPointerDown = false;
@@ -181,111 +188,25 @@ export function launchFullscreenMidnightSwim(item) {
         driftSpeed: 0.3 + Math.random() * 0.4
     }));
 
-    // 4. Vagues au loin qui s'explosent contre le sol avec réverbération sourde
-    let nextBoomWaveTimer = 6.5;
+    // 4. Vagues au loin qui s'explosent contre le sol avec réverbération sourde et puissante
+    let nextBoomWaveTimer = 4.5;
     let distantWave = null;
     let screenTremor = 0;
 
-    // Synthèse audio Web Audio API : silence nocturne + clapotis doux + BOUM sourd réverbéré au loin
-    let audioCtx = null;
-    let waterSwishGain = null;
-    let waterSwishFilter = null;
+    // Moteur audio procédural (vagues très graves & puissantes, musique romantique évolutive)
+    const nightAudio = createMidnightAudioEngine();
 
-    function ensureNightAudio() {
-        try {
-            if (!audioCtx) {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContextClass) return null;
-                audioCtx = new AudioContextClass();
-
-                const bufSize = audioCtx.sampleRate * 2;
-                const noiseBuf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
-                const data = noiseBuf.getChannelData(0);
-                for (let i = 0; i < bufSize; i++) {
-                    data[i] = (Math.random() * 2 - 1) * 0.5;
-                }
-                const src = audioCtx.createBufferSource();
-                src.buffer = noiseBuf;
-                src.loop = true;
-
-                waterSwishFilter = audioCtx.createBiquadFilter();
-                waterSwishFilter.type = 'bandpass';
-                waterSwishFilter.frequency.value = 650;
-                waterSwishFilter.Q.value = 1.8;
-
-                waterSwishGain = audioCtx.createGain();
-                waterSwishGain.gain.value = 0;
-
-                src.connect(waterSwishFilter);
-                waterSwishFilter.connect(waterSwishGain);
-                waterSwishGain.connect(audioCtx.destination);
-                src.start(0);
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            return audioCtx;
-        } catch {
-            return null;
-        }
+    function syncMidnightStateAttributes(inWater) {
+        const phase = finaleShown || constellationProgress >= HEART_STAR_COUNT
+            ? 'completed'
+            : (stargazePhase
+                ? 'stargaze'
+                : (player.isHugging ? 'hug' : (inWater ? 'water' : 'beach')));
+        fsOverlay.dataset.midnightPhase = phase;
+        fsOverlay.dataset.constellationProgress = String(constellationProgress);
+        fsOverlay.dataset.musicMode = nightAudio.getMusicMode();
     }
-
-    // Produit le gros bruit sourd + réverbération caverneuse des vagues qui s'écrasent au loin dans la nuit
-    function triggerDistantWaveBoomSound() {
-        const ac = ensureNightAudio();
-        if (!ac) return;
-        try {
-            const now = ac.currentTime;
-
-            // 1. Impact sourd basse fréquence (Sub-bass thump)
-            const osc = ac.createOscillator();
-            const oscGain = ac.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(68, now);
-            osc.frequency.exponentialRampToValueAtTime(24, now + 1.8);
-
-            oscGain.gain.setValueAtTime(0.001, now);
-            oscGain.gain.linearRampToValueAtTime(0.38, now + 0.09);
-            oscGain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
-
-            osc.connect(oscGain);
-            oscGain.connect(ac.destination);
-            osc.start(now);
-            osc.stop(now + 2.5);
-
-            // 2. Grondement d'explosion d'eau au loin avec longue réverbération
-            const dur = 3.4;
-            const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
-            const ch = buf.getChannelData(0);
-            let lastOut = 0;
-            for (let i = 0; i < ch.length; i++) {
-                const white = Math.random() * 2 - 1;
-                lastOut = (lastOut + 0.04 * white) / 1.04;
-                ch[i] = lastOut * 3.2;
-            }
-
-            const noise = ac.createBufferSource();
-            noise.buffer = buf;
-
-            const lowpass = ac.createBiquadFilter();
-            lowpass.type = 'lowpass';
-            lowpass.frequency.setValueAtTime(220, now);
-            lowpass.frequency.exponentialRampToValueAtTime(65, now + dur);
-
-            const rumbleGain = ac.createGain();
-            rumbleGain.gain.setValueAtTime(0.001, now);
-            rumbleGain.gain.linearRampToValueAtTime(0.34, now + 0.14);
-            rumbleGain.gain.exponentialRampToValueAtTime(0.12, now + 0.9);
-            rumbleGain.gain.exponentialRampToValueAtTime(0.0008, now + dur);
-
-            noise.connect(lowpass);
-            lowpass.connect(rumbleGain);
-            rumbleGain.connect(ac.destination);
-            noise.start(now);
-        } catch {
-            // Ignore si l'audio est bloqué
-        }
-    }
+    syncMidnightStateAttributes(false);
 
     function spawnPlankton(x, y, vx, vy, count = 4) {
         for (let i = 0; i < count; i++) {
@@ -341,101 +262,132 @@ export function launchFullscreenMidnightSwim(item) {
         openModal(item);
     }
 
-    // Note cristalline douce quand une étoile de la constellation s'allume dans le ciel
-    function playStarlightChime(stepIndex) {
-        const ac = ensureNightAudio();
-        if (!ac) return;
-        try {
-            const freq = STARLIGHT_CHIME_NOTES[stepIndex % STARLIGHT_CHIME_NOTES.length];
-            const now = ac.currentTime;
-            const osc = ac.createOscillator();
-            const gain = ac.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, now);
-
-            gain.gain.setValueAtTime(0.001, now);
-            gain.gain.linearRampToValueAtTime(0.11, now + 0.03);
-            gain.gain.exponentialRampToValueAtTime(0.0008, now + 1.6);
-
-            osc.connect(gain);
-            gain.connect(ac.destination);
-            osc.start(now);
-            osc.stop(now + 1.65);
-        } catch {
-            // Ignore si l'audio est bloqué
+    function spawnStarBurst(x, y, count = 16, warmTint = false) {
+        for (let i = 0; i < count; i++) {
+            const a = (Math.PI * 2 * i) / count + Math.random() * 0.35;
+            const spd = 16 + Math.random() * 54;
+            starBursts.push({
+                x,
+                y,
+                vx: Math.cos(a) * spd,
+                vy: Math.sin(a) * spd,
+                r: 1.4 + Math.random() * 2.2,
+                life: 0.95 + Math.random() * 0.55,
+                warm: warmTint || Math.random() < 0.35
+            });
         }
     }
 
-    function triggerStargazeWish(clientX, clientY) {
+    function triggerStargazeWish(clientX, clientY, isDrag = false) {
         if (!stargazePhase || finaleShown) return;
-        ensureNightAudio();
+        nightAudio.ensureAudio();
 
-        // Éclats d'étoiles sous le doigt
-        for (let i = 0; i < 14; i++) {
-            const a = (Math.PI * 2 * i) / 14 + Math.random() * 0.3;
-            const spd = 18 + Math.random() * 48;
-            starBursts.push({
-                x: clientX,
-                y: clientY,
-                vx: Math.cos(a) * spd,
-                vy: Math.sin(a) * spd,
-                r: 1.4 + Math.random() * 2.0,
-                life: 0.9 + Math.random() * 0.5
+        if (constellationProgress >= HEART_STAR_COUNT) return;
+
+        const layout = getHeartLayout(width, horizonY);
+        const heartStars = getHeartStars(layout.centerX, layout.centerY, layout.heartScale);
+        const result = evaluateSkyTouch(clientX, clientY, constellationProgress, heartStars, layout.hitRadius);
+
+        if (result.hit) {
+            // En glissement continu, cadence douce pour savourer chaque étoile ; un clic/tap direct répond toujours immédiatement
+            const nowMs = performance.now();
+            if (isDrag && (nowMs - lastStarLitAtMs) < DRAG_STAR_COOLDOWN_MS) return;
+            lastStarLitAtMs = nowMs;
+
+            fsHint.style.opacity = '0';
+
+            const pt = result.targetStar;
+            spawnStarBurst(pt.x, pt.y, result.isMilestone ? 28 : 18, result.isMilestone);
+            heartPulseWaves.push({
+                x: pt.x,
+                y: pt.y,
+                r: 6,
+                maxR: result.isComplete ? 120 : (result.isMilestone ? 54 : 34),
+                alpha: result.isMilestone ? 0.85 : 0.65,
+                warm: result.isMilestone
             });
-        }
 
-        // Fait traverser une belle étoile filante
-        const dir = Math.random() < 0.5 ? 1 : -1;
-        shootingStars.push({
-            x: clientX - dir * 80,
-            y: Math.max(30, clientY - 50),
-            vx: dir * (250 + Math.random() * 120),
-            vy: 90 + Math.random() * 60,
-            life: 0.85
-        });
+            nightAudio.playStarChime(result.starIndex, result.isMilestone);
+            constellationProgress = result.nextIndex;
+            lastArcDrawProgress = 0;
 
-        // Dès qu'elle touche le ciel, on masque le petit texte d'aide s'il était affiché
-        fsHint.style.opacity = '0';
+            const musicState = getConstellationMusicState(constellationProgress, HEART_STAR_COUNT, result.isComplete);
+            nightAudio.setMusicProgress(musicState.progress);
 
-        if (constellationProgress < HEART_STAR_ANGLES.length) {
-            const heartCenterX = width * 0.5;
-            const heartCenterY = horizonY * 0.42;
-            const heartScale = Math.min(width, horizonY) * 0.0078;
-            const pt = getSmoothHeartPoint(HEART_STAR_ANGLES[constellationProgress], heartCenterX, heartCenterY, heartScale);
-
-            for (let i = 0; i < 18; i++) {
-                const a = Math.random() * Math.PI * 2;
-                const spd = 12 + Math.random() * 42;
-                starBursts.push({
-                    x: pt.x,
-                    y: pt.y,
-                    vx: Math.cos(a) * spd,
-                    vy: Math.sin(a) * spd,
-                    r: 1.6 + Math.random() * 2.2,
-                    life: 1.1 + Math.random() * 0.5
-                });
-            }
-            playStarlightChime(constellationProgress);
-            constellationProgress++;
-
-            if (constellationProgress >= HEART_STAR_ANGLES.length) {
-                // Pluie d'étoiles filantes finale quand le vrai cœur s'illumine automatiquement
-                for (let k = 0; k < 5; k++) {
+            if (result.isMilestone && !result.isComplete) {
+                // Double étoile filante croisée aux étapes clés (4e et 8e étoile)
+                for (let m = 0; m < 2; m++) {
+                    const dir = m === 0 ? 1 : -1;
                     shootingStars.push({
-                        x: width * (0.15 + k * 0.17),
-                        y: horizonY * (0.08 + (k % 3) * 0.12),
-                        vx: (k % 2 === 0 ? 1 : -1) * (240 + k * 25),
-                        vy: 105 + k * 15,
-                        life: 0.95 + k * 0.15
+                        x: width * (m === 0 ? 0.22 : 0.78),
+                        y: horizonY * (0.14 + m * 0.10),
+                        vx: dir * (260 + m * 40),
+                        vy: 85 + m * 25,
+                        life: 0.95
                     });
                 }
             }
+
+            if (result.isComplete) {
+                closingArcProgress = 0;
+                if (!climaxTriggered) {
+                    climaxTriggered = true;
+                    nightAudio.triggerMusicClimax();
+                }
+
+                // Grande onde lumineuse + pluie d'étoiles filantes quand le cœur se referme parfaitement
+                heartPulseWaves.push({
+                    x: layout.centerX,
+                    y: layout.centerY,
+                    r: 18,
+                    maxR: Math.max(width, horizonY) * 0.42,
+                    alpha: 0.9,
+                    warm: true
+                });
+                spawnStarBurst(layout.centerX, layout.centerY, 36, true);
+
+                for (let k = 0; k < 7; k++) {
+                    shootingStars.push({
+                        x: width * (0.10 + k * 0.13),
+                        y: horizonY * (0.06 + (k % 3) * 0.11),
+                        vx: (k % 2 === 0 ? 1 : -1) * (250 + k * 24),
+                        vy: 100 + k * 14,
+                        life: 1.0 + k * 0.14
+                    });
+                }
+            }
+            return;
+        }
+
+        // Si Clara tape ailleurs dans le ciel (hors glissement), on crée une étoile filante + une luciole guide vers la prochaine étoile !
+        if (!isDrag && result.targetStar) {
+            spawnStarBurst(clientX, clientY, 10, false);
+
+            const dir = Math.random() < 0.5 ? 1 : -1;
+            shootingStars.push({
+                x: clientX - dir * 70,
+                y: Math.max(26, clientY - 40),
+                vx: dir * (240 + Math.random() * 110),
+                vy: 80 + Math.random() * 55,
+                life: 0.8
+            });
+
+            // Luciole d'étoile qui file doucement du doigt vers la prochaine étoile du cœur
+            guidingWisps.push({
+                startX: clientX,
+                startY: clientY,
+                targetX: result.targetStar.x,
+                targetY: result.targetStar.y,
+                ctrlX: (clientX + result.targetStar.x) * 0.5 + (Math.random() - 0.5) * 90,
+                ctrlY: Math.min(clientY, result.targetStar.y) - 45,
+                progress: 0
+            });
         }
     }
 
-    // Contrôles tactiles & souris : se déplacer librement ou, pendant la suite, illuminer le ciel étoilé
+    // Contrôles tactiles & souris : se déplacer librement ou, pendant la suite, relier les étoiles du cœur (tap ou glisser)
     const setPointerTarget = (clientX, clientY) => {
-        ensureNightAudio();
+        nightAudio.ensureAudio();
         if (stargazePhase) return;
         player.targetX = clamp(clientX, 28, width - 28);
         player.targetY = clamp(clientY, horizonY + 26, height - 32);
@@ -445,7 +397,7 @@ export function launchFullscreenMidnightSwim(item) {
         if (!e.touches || e.touches.length === 0) return;
         isPointerDown = true;
         if (stargazePhase) {
-            triggerStargazeWish(e.touches[0].clientX, e.touches[0].clientY);
+            triggerStargazeWish(e.touches[0].clientX, e.touches[0].clientY, false);
             return;
         }
         setPointerTarget(e.touches[0].clientX, e.touches[0].clientY);
@@ -453,7 +405,10 @@ export function launchFullscreenMidnightSwim(item) {
 
     const onTouchMove = (e) => {
         if (!isPointerDown || !e.touches || e.touches.length === 0) return;
-        if (stargazePhase) return;
+        if (stargazePhase) {
+            triggerStargazeWish(e.touches[0].clientX, e.touches[0].clientY, true);
+            return;
+        }
         setPointerTarget(e.touches[0].clientX, e.touches[0].clientY);
     };
 
@@ -466,7 +421,7 @@ export function launchFullscreenMidnightSwim(item) {
     const onMouseDown = (e) => {
         isPointerDown = true;
         if (stargazePhase) {
-            triggerStargazeWish(e.clientX, e.clientY);
+            triggerStargazeWish(e.clientX, e.clientY, false);
             return;
         }
         setPointerTarget(e.clientX, e.clientY);
@@ -474,6 +429,10 @@ export function launchFullscreenMidnightSwim(item) {
 
     const onMouseMove = (e) => {
         if (!isPointerDown) return;
+        if (stargazePhase) {
+            triggerStargazeWish(e.clientX, e.clientY, true);
+            return;
+        }
         setPointerTarget(e.clientX, e.clientY);
     };
 
@@ -484,7 +443,7 @@ export function launchFullscreenMidnightSwim(item) {
     };
 
     const onKeyDown = (e) => {
-        ensureNightAudio();
+        nightAudio.ensureAudio();
         if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'q' || e.key === 'A' || e.key === 'Q') keys.left = true;
         if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
         if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'z' || e.key === 'W' || e.key === 'Z') keys.up = true;
@@ -595,84 +554,238 @@ export function launchFullscreenMidnightSwim(item) {
             ctx.stroke();
         }
 
-        // 1b. SUITE SOUS LES ÉTOILES : ÉTOILES À TOUCHER PUIS VRAI CŒUR PARFAITEMENT COURBÉ
+        // 1b. SUITE SOUS LES ÉTOILES : CONSTELLATION PROGRESSIVE EN 12 ÉTOILES -> CŒUR LUMINEUX PALPITANT
         if (skyExpandBlend > 0.05) {
             ctx.save();
-            const heartCenterX = width * 0.5;
-            const heartCenterY = horizonY * 0.42;
-            const heartScale = Math.min(width, horizonY) * 0.0078;
+            const layout = getHeartLayout(width, horizonY);
+            const { centerX: heartCenterX, centerY: heartCenterY, heartScale } = layout;
+            const heartStars = getHeartStars(heartCenterX, heartCenterY, heartScale);
+            const isHeartDone = constellationProgress >= HEART_STAR_COUNT;
+            const progressRatio = constellationProgress / HEART_STAR_COUNT;
 
-            // Dès qu'elle a terminé ses quelques pressions, trace automatiquement un vrai cœur bien arrondi sans angle bizarre
-            if (heartRevealBlend > 0.01) {
-                const maxSteps = 140;
-                const stepsToDraw = Math.max(2, Math.floor(maxSteps * heartRevealBlend));
-
-                ctx.save();
+            // Légère lueur nébuleuse intérieure qui s'éveille doucement à mesure que le cœur se dessine
+            if (constellationProgress >= 2) {
+                const heartBeat = isHeartDone ? (1 + Math.sin(t * 3.4) * 0.065) : 1;
+                const innerAlpha = isHeartDone
+                    ? (0.16 + 0.07 * Math.sin(t * 3.4)) * Math.max(0.4, heartRevealBlend)
+                    : progressRatio * 0.085;
+                const fillGrad = ctx.createRadialGradient(
+                    heartCenterX, heartCenterY, 4,
+                    heartCenterX, heartCenterY, heartScale * 20 * heartBeat
+                );
+                fillGrad.addColorStop(0, `rgba(255, 184, 210, ${innerAlpha})`);
+                fillGrad.addColorStop(0.55, `rgba(0, 245, 212, ${innerAlpha * 0.58})`);
+                fillGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = fillGrad;
                 ctx.beginPath();
-                for (let s = 0; s <= stepsToDraw; s++) {
+                ctx.arc(heartCenterX, heartCenterY, heartScale * 20 * heartBeat, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Courbes de constellation déjà reliées (tracé fluide le long de la vraie courbe du cœur)
+            if (constellationProgress >= 2) {
+                const segmentsToDraw = constellationProgress - 1;
+                ctx.save();
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.shadowColor = isHeartDone ? 'rgba(255, 195, 218, 0.85)' : 'rgba(0, 245, 212, 0.8)';
+                ctx.shadowBlur = isHeartDone ? (14 + Math.sin(t * 3.4) * 5) : 10;
+                ctx.strokeStyle = isHeartDone
+                    ? 'rgba(255, 245, 250, 0.94)'
+                    : 'rgba(225, 252, 255, 0.86)';
+                ctx.lineWidth = isHeartDone ? 2.6 : 2.1;
+
+                for (let seg = 0; seg < segmentsToDraw; seg++) {
+                    const t0 = HEART_STAR_ANGLES[seg];
+                    const t1 = HEART_STAR_ANGLES[seg + 1];
+                    const frac = seg === segmentsToDraw - 1 ? lastArcDrawProgress : 1;
+                    const tEnd = t0 + (t1 - t0) * frac;
+                    const arcPts = sampleHeartArc(t0, tEnd, heartCenterX, heartCenterY, heartScale, 18);
+
+                    ctx.beginPath();
+                    for (let j = 0; j < arcPts.length; j++) {
+                        if (j === 0) ctx.moveTo(arcPts[j].x, arcPts[j].y);
+                        else ctx.lineTo(arcPts[j].x, arcPts[j].y);
+                    }
+                    ctx.stroke();
+                }
+
+                // Arc de fermeture finale (entre la 12e étoile et la pointe basse)
+                if (isHeartDone && closingArcProgress > 0.01) {
+                    const t0 = HEART_STAR_ANGLES[HEART_STAR_COUNT - 1];
+                    const t1 = Math.PI * 3; // Revient exactement à la pointe basse (theta = Math.PI)
+                    const tEnd = t0 + (t1 - t0) * closingArcProgress;
+                    const closePts = sampleHeartArc(t0, tEnd, heartCenterX, heartCenterY, heartScale, 20);
+
+                    ctx.beginPath();
+                    for (let j = 0; j < closePts.length; j++) {
+                        if (j === 0) ctx.moveTo(closePts[j].x, closePts[j].y);
+                        else ctx.lineTo(closePts[j].x, closePts[j].y);
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // Halo final du cœur complet qui respire avec la musique emballée
+            if (isHeartDone && heartRevealBlend > 0.02) {
+                const maxSteps = 140;
+                const pulseScale = 1 + Math.sin(t * 3.4) * 0.022;
+                ctx.save();
+                ctx.translate(heartCenterX, heartCenterY);
+                ctx.scale(pulseScale, pulseScale);
+                ctx.translate(-heartCenterX, -heartCenterY);
+
+                ctx.beginPath();
+                for (let s = 0; s <= maxSteps; s++) {
                     const theta = (s / maxSteps) * Math.PI * 2;
                     const pt = getSmoothHeartPoint(theta, heartCenterX, heartCenterY, heartScale);
                     if (s === 0) ctx.moveTo(pt.x, pt.y);
                     else ctx.lineTo(pt.x, pt.y);
                 }
-                if (heartRevealBlend >= 0.99) {
-                    ctx.closePath();
-                    const fillGrad = ctx.createRadialGradient(
-                        heartCenterX, heartCenterY, 4,
-                        heartCenterX, heartCenterY, heartScale * 18
-                    );
-                    fillGrad.addColorStop(0, `rgba(255, 190, 210, ${0.14 * heartRevealBlend})`);
-                    fillGrad.addColorStop(0.6, `rgba(0, 245, 212, ${0.08 * heartRevealBlend})`);
-                    fillGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                    ctx.fillStyle = fillGrad;
-                    ctx.fill();
-                }
+                ctx.closePath();
 
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.shadowColor = 'rgba(0, 245, 212, 0.85)';
-                ctx.shadowBlur = 12;
-                ctx.strokeStyle = `rgba(235, 252, 255, ${0.88 * Math.min(1, heartRevealBlend * 1.2)})`;
-                ctx.lineWidth = 2.2;
+                ctx.shadowColor = 'rgba(255, 175, 205, 0.9)';
+                ctx.shadowBlur = 18;
+                ctx.strokeStyle = `rgba(255, 240, 246, ${0.65 * heartRevealBlend})`;
+                ctx.lineWidth = 3.2;
                 ctx.stroke();
                 ctx.restore();
             }
 
-            // Étoiles guides que Clara touche (celles allumées + la prochaine qui pulse doucement)
-            for (let i = 0; i < HEART_STAR_ANGLES.length; i++) {
-                const pt = getSmoothHeartPoint(HEART_STAR_ANGLES[i], heartCenterX, heartCenterY, heartScale);
-                const cx = pt.x;
-                const cy = pt.y;
+            // Petite luciole lumineuse qui glisse de la dernière étoile vers la prochaine cible (guide intuitif !)
+            if (stargazePhase && !isHeartDone && constellationProgress > 0 && skyExpandBlend > 0.5) {
+                const prevTheta = HEART_STAR_ANGLES[constellationProgress - 1];
+                const nextTheta = HEART_STAR_ANGLES[constellationProgress];
+                const glidePhase = (t * 0.72) % 1;
+                const fireflyTheta = prevTheta + (nextTheta - prevTheta) * glidePhase;
+                const ff = getSmoothHeartPoint(fireflyTheta, heartCenterX, heartCenterY, heartScale);
+                const ffAlpha = Math.sin(glidePhase * Math.PI) * 0.75 * skyExpandBlend;
+
+                ctx.save();
+                const ffGrad = ctx.createRadialGradient(ff.x, ff.y, 0.5, ff.x, ff.y, 11);
+                ffGrad.addColorStop(0, `rgba(255, 245, 210, ${ffAlpha})`);
+                ffGrad.addColorStop(0.5, `rgba(0, 245, 212, ${ffAlpha * 0.6})`);
+                ffGrad.addColorStop(1, 'rgba(0, 245, 212, 0)');
+                ctx.fillStyle = ffGrad;
+                ctx.beginPath();
+                ctx.arc(ff.x, ff.y, 11, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Étoiles guides de la constellation (allumées, prochaine cible brillante, et légers repères discrets à venir)
+            for (let i = 0; i < heartStars.length; i++) {
+                const star = heartStars[i];
+                const cx = star.x;
+                const cy = star.y;
                 const isLit = i < constellationProgress;
                 const isNext = i === constellationProgress && stargazePhase;
+                const isUpcomingPreview = (i === constellationProgress + 1 || i === constellationProgress + 2) && stargazePhase && skyExpandBlend > 0.6;
 
                 if (isLit) {
-                    const glowG = ctx.createRadialGradient(cx, cy, 1, cx, cy, 15);
-                    glowG.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-                    glowG.addColorStop(0.4, 'rgba(0, 245, 212, 0.55)');
+                    const beatGlow = isHeartDone ? (15 + Math.sin(t * 3.4 + i * 0.4) * 4) : 14;
+                    const glowG = ctx.createRadialGradient(cx, cy, 1, cx, cy, beatGlow);
+                    glowG.addColorStop(0, 'rgba(255, 255, 255, 0.98)');
+                    glowG.addColorStop(0.42, isHeartDone ? 'rgba(255, 198, 220, 0.62)' : 'rgba(0, 245, 212, 0.55)');
                     glowG.addColorStop(1, 'rgba(0, 245, 212, 0)');
                     ctx.fillStyle = glowG;
                     ctx.beginPath();
-                    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+                    ctx.arc(cx, cy, beatGlow, 0, Math.PI * 2);
                     ctx.fill();
 
                     ctx.fillStyle = '#FFFFFF';
                     ctx.beginPath();
                     ctx.arc(cx, cy, 3.0, 0, Math.PI * 2);
                     ctx.fill();
-                } else if (isNext && skyExpandBlend > 0.5) {
-                    const pulse = 0.45 + 0.45 * Math.sin(t * 4.2);
-                    ctx.strokeStyle = `rgba(0, 245, 212, ${pulse * skyExpandBlend})`;
-                    ctx.lineWidth = 1.3;
+                } else if (isNext && skyExpandBlend > 0.45) {
+                    const pulse = 0.5 + 0.5 * Math.sin(t * 4.4);
+                    const ringR = 11 + (1 - pulse) * 11;
+
+                    // Halo doré/turquoise chaleureux qui invite clairement à toucher ou glisser dessus
+                    const targetHalo = ctx.createRadialGradient(cx, cy, 1, cx, cy, 24);
+                    targetHalo.addColorStop(0, `rgba(255, 246, 210, ${(0.88 * skyExpandBlend).toFixed(3)})`);
+                    targetHalo.addColorStop(0.45, `rgba(0, 245, 212, ${(0.42 * skyExpandBlend).toFixed(3)})`);
+                    targetHalo.addColorStop(1, 'rgba(0, 245, 212, 0)');
+                    ctx.fillStyle = targetHalo;
                     ctx.beginPath();
-                    ctx.arc(cx, cy, 7 + (1 - pulse) * 6, 0, Math.PI * 2);
+                    ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Anneau qui pulse doucement
+                    ctx.strokeStyle = `rgba(255, 232, 168, ${((0.35 + pulse * 0.55) * skyExpandBlend).toFixed(3)})`;
+                    ctx.lineWidth = 1.6;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
                     ctx.stroke();
 
-                    ctx.fillStyle = `rgba(255, 250, 235, ${(0.5 + pulse * 0.5) * skyExpandBlend})`;
+                    // Petite étoile à 4 branches scintillante au centre de la cible
+                    const rayLen = 6 + pulse * 3.5;
+                    ctx.strokeStyle = `rgba(255, 252, 238, ${(0.9 * skyExpandBlend).toFixed(3)})`;
+                    ctx.lineWidth = 1.2;
                     ctx.beginPath();
-                    ctx.arc(cx, cy, 2.8, 0, Math.PI * 2);
+                    ctx.moveTo(cx - rayLen, cy);
+                    ctx.lineTo(cx + rayLen, cy);
+                    ctx.moveTo(cx, cy - rayLen);
+                    ctx.lineTo(cx, cy + rayLen);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#FFFDF4';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 3.6, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (isUpcomingPreview) {
+                    // Tout petit point discret pour la prochaine étoile d'après
+                    const softTwinkle = (0.18 + 0.14 * Math.sin(t * 2.6 + i)) * skyExpandBlend;
+                    ctx.fillStyle = `rgba(210, 245, 255, ${softTwinkle.toFixed(3)})`;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 1.9, 0, Math.PI * 2);
                     ctx.fill();
                 }
+            }
+
+            // Ondes lumineuses concentriques à chaque étoile attrapée
+            for (let i = heartPulseWaves.length - 1; i >= 0; i--) {
+                const pw = heartPulseWaves[i];
+                pw.r += (pw.maxR - pw.r) * dt * 3.4;
+                pw.alpha -= dt * 0.95;
+                if (pw.alpha <= 0.01) {
+                    heartPulseWaves.splice(i, 1);
+                    continue;
+                }
+                ctx.strokeStyle = pw.warm
+                    ? `rgba(255, 210, 224, ${pw.alpha.toFixed(3)})`
+                    : `rgba(0, 245, 212, ${pw.alpha.toFixed(3)})`;
+                ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                ctx.arc(pw.x, pw.y, pw.r, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Lucioles guides envoyées vers la prochaine étoile si Clara touche ailleurs dans le ciel
+            for (let i = guidingWisps.length - 1; i >= 0; i--) {
+                const w = guidingWisps[i];
+                w.progress += dt * 1.45;
+                if (w.progress >= 1) {
+                    guidingWisps.splice(i, 1);
+                    continue;
+                }
+                const u = w.progress;
+                const inv = 1 - u;
+                const wx = inv * inv * w.startX + 2 * inv * u * w.ctrlX + u * u * w.targetX;
+                const wy = inv * inv * w.startY + 2 * inv * u * w.ctrlY + u * u * w.targetY;
+                const wAlpha = Math.sin(u * Math.PI) * 0.92;
+
+                const wGrad = ctx.createRadialGradient(wx, wy, 0.5, wx, wy, 10);
+                wGrad.addColorStop(0, `rgba(255, 250, 224, ${wAlpha})`);
+                wGrad.addColorStop(0.55, `rgba(0, 245, 212, ${wAlpha * 0.65})`);
+                wGrad.addColorStop(1, 'rgba(0, 245, 212, 0)');
+                ctx.fillStyle = wGrad;
+                ctx.beginPath();
+                ctx.arc(wx, wy, 10, 0, Math.PI * 2);
+                ctx.fill();
             }
 
             // Éclats d'étoiles lors du toucher
@@ -687,7 +800,10 @@ export function launchFullscreenMidnightSwim(item) {
                     starBursts.splice(i, 1);
                     continue;
                 }
-                ctx.fillStyle = `rgba(210, 255, 250, ${Math.min(1, sb.life)})`;
+                const alpha = Math.min(1, sb.life);
+                ctx.fillStyle = sb.warm
+                    ? `rgba(255, 232, 186, ${alpha})`
+                    : `rgba(210, 255, 250, ${alpha})`;
                 ctx.beginPath();
                 ctx.arc(sb.x, sb.y, sb.r, 0, Math.PI * 2);
                 ctx.fill();
@@ -1334,16 +1450,23 @@ export function launchFullscreenMidnightSwim(item) {
         if (wantsToLeaveHug && !stargazePhase) {
             player.isHugging = false;
             postSwimHugTimer = 0;
+            if (hasPlayedInWater) {
+                nightAudio.pauseRomanticMusic();
+            }
         }
 
         // Transition fluide du ciel étoilé pendant la suite (stargazePhase)
         if (stargazePhase) {
-            skyExpandBlend += (1 - skyExpandBlend) * Math.min(1, dt * 1.4);
+            skyExpandBlend += (1 - skyExpandBlend) * Math.min(1, dt * 2.1);
             horizonY = baseHorizonY + (height * 0.76 - baseHorizonY) * skyExpandBlend;
             shorelineY = baseShorelineY + (height * 0.86 - baseShorelineY) * skyExpandBlend;
             alexis.x = width * (0.36 + 0.12 * skyExpandBlend);
             alexis.y = shorelineY + (height - shorelineY) * 0.48;
             player.isHugging = true;
+        }
+
+        if (lastArcDrawProgress < 1) {
+            lastArcDrawProgress = Math.min(1, lastArcDrawProgress + dt * 2.8);
         }
 
         // Distance entre Clara et la place assise juste à droite d'Alexis sur le sable
@@ -1353,6 +1476,10 @@ export function launchFullscreenMidnightSwim(item) {
 
         if (!player.isHugging && player.y >= shorelineY - 8 && distToSeat < 34 && !wantsToLeaveHug) {
             player.isHugging = true;
+            // Dès que Clara revient vers Alexis après avoir joué dans l'eau : lance la petite musique calme !
+            if (hasPlayedInWater) {
+                nightAudio.startRomanticMusic();
+            }
         }
 
         if (player.isHugging) {
@@ -1376,8 +1503,11 @@ export function launchFullscreenMidnightSwim(item) {
             }
 
             // Déclenchement de la suite : uniquement APRÈS qu'elle est allée jouer dans l'eau,
-            // qu'elle est revenue faire un câlin, et après une pause de quelques bonnes secondes (4.5s)
+            // qu'elle est revenue faire un câlin (musique calme lancée), et après une douce pause (4.5s)
             if (hasPlayedInWater && !stargazePhase) {
+                if (nightAudio.getMusicMode() === 'idle') {
+                    nightAudio.startRomanticMusic();
+                }
                 postSwimHugTimer += dt;
                 if (postSwimHugTimer >= POST_SWIM_HUG_DELAY_SEC) {
                     stargazePhase = true;
@@ -1406,10 +1536,13 @@ export function launchFullscreenMidnightSwim(item) {
             }
         }
 
-        // Dès qu'elle a terminé ses quelques pressions, trace automatiquement le vrai cœur bien fait,
-        // le laisse briller sans pop-up (avec la croix en haut à droite), puis ramène directement au menu 10s après
-        if (stargazePhase && constellationProgress >= HEART_STAR_ANGLES.length && !finaleShown) {
-            heartRevealBlend = Math.min(1, heartRevealBlend + dt * 0.9);
+        // Dès que les 12 étoiles du cœur sont complétées : fermeture finale, musique qui s'emballe,
+        // contemplation sous les étoiles puis retour au menu après 16s
+        if (stargazePhase && constellationProgress >= HEART_STAR_COUNT && !finaleShown) {
+            closingArcProgress = Math.min(1, closingArcProgress + dt * 2.1);
+            if (closingArcProgress >= 0.85) {
+                heartRevealBlend = Math.min(1, heartRevealBlend + dt * 1.1);
+            }
             if (heartRevealBlend >= 1) {
                 constellationCompletedTimer += dt;
                 if (constellationCompletedTimer >= CONSTELLATION_RETURN_MENU_SEC) {
@@ -1429,15 +1562,6 @@ export function launchFullscreenMidnightSwim(item) {
         player.hairSway += (targetHairSway - player.hairSway) * Math.min(1, dt * 8);
 
         const inWater = player.y < shorelineY && !player.isHugging;
-
-        // Son doux de l'eau quand elle court dans l'eau
-        if (waterSwishGain && audioCtx) {
-            const targetSwish = (inWater && speed > 10) ? Math.min(0.08, (speed / PLAYER_MAX_SPEED) * 0.075) : 0;
-            waterSwishGain.gain.setTargetAtTime(targetSwish, audioCtx.currentTime, 0.05);
-            if (waterSwishFilter) {
-                waterSwishFilter.frequency.setTargetAtTime(450 + (speed / PLAYER_MAX_SPEED) * 550, audioCtx.currentTime, 0.05);
-            }
-        }
 
         // 2. Aura et traînée de phytoplancton bleu turquoise
         if (inWater) {
@@ -1475,10 +1599,13 @@ export function launchFullscreenMidnightSwim(item) {
             }
         }
 
-        // 3. Étoiles filantes périodiques
+        // 3. Étoiles filantes périodiques (plus fréquentes quand le cœur brille au climax)
         nextShootingStarTimer -= dt;
         if (nextShootingStarTimer <= 0) {
-            nextShootingStarTimer = (stargazePhase ? 2.2 : 4.5) + Math.random() * (stargazePhase ? 2.5 : 5.5);
+            const climaxActive = constellationProgress >= HEART_STAR_COUNT;
+            nextShootingStarTimer = climaxActive
+                ? (1.1 + Math.random() * 1.4)
+                : ((stargazePhase ? 2.2 : 4.5) + Math.random() * (stargazePhase ? 2.5 : 5.5));
             const startX = width * (0.15 + Math.random() * 0.7);
             const startY = horizonY * (0.08 + Math.random() * 0.45);
             const dir = Math.random() < 0.5 ? 1 : -1;
@@ -1491,39 +1618,40 @@ export function launchFullscreenMidnightSwim(item) {
             });
         }
 
-        // 4. Vagues au loin qui s'explosent contre le sol avec un bruit énorme dans le silence
+        // 4. Vagues au loin qui s'explosent contre le sol avec un bruit énorme et très grave dans le silence
         if (inWater) {
             nextBoomWaveTimer -= dt;
             if (nextBoomWaveTimer <= 0 && !distantWave) {
                 nextBoomWaveTimer = 9.5 + Math.random() * 4.5;
                 distantWave = {
                     xNorm: 0.22 + Math.random() * 0.56,
-                    widthNorm: 0.32 + Math.random() * 0.22,
-                    crestH: 14,
+                    widthNorm: 0.36 + Math.random() * 0.22,
+                    crestH: 18,
                     alpha: 1.0,
-                    shockRadius: 10
+                    shockRadius: 12
                 };
-                screenTremor = 1.0;
+                screenTremor = 1.3;
 
-                triggerDistantWaveBoomSound();
+                nightAudio.triggerWaveBoom();
                 if (navigator.vibrate) {
-                    navigator.vibrate([65, 35, 110]);
+                    navigator.vibrate([85, 35, 130]);
                 }
             }
         }
 
         if (distantWave) {
-            distantWave.shockRadius += dt * 190;
-            distantWave.alpha -= dt * 0.42;
+            distantWave.shockRadius += dt * 205;
+            distantWave.alpha -= dt * 0.38;
             if (distantWave.alpha <= 0) {
                 distantWave = null;
             }
         }
 
         if (screenTremor > 0) {
-            screenTremor = Math.max(0, screenTremor - dt * 1.4);
+            screenTremor = Math.max(0, screenTremor - dt * 1.35);
         }
 
+        syncMidnightStateAttributes(inWater);
         drawMidnightScene(now, dt);
         animId = requestAnimationFrame(loop);
     }
@@ -1539,7 +1667,10 @@ export function launchFullscreenMidnightSwim(item) {
         fsHint.style.pointerEvents = '';
         fsHint.style.cursor = '';
         fsHint.onclick = null;
-        closeAudioContextSafely(audioCtx);
+        delete fsOverlay.dataset.midnightPhase;
+        delete fsOverlay.dataset.constellationProgress;
+        delete fsOverlay.dataset.musicMode;
+        nightAudio.dispose();
         canvas.removeEventListener('touchstart', onTouchStart);
         window.removeEventListener('touchmove', onTouchMove);
         window.removeEventListener('touchend', onTouchEnd);

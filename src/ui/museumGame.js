@@ -27,7 +27,8 @@ import {
     getLoopProgress,
     evaluateMuseumObjective,
     shortestLoopDelta,
-    sampleMuseumLedColor
+    sampleMuseumLedColor,
+    splitTextByScientificNames
 } from '../logic/museumGameLogic.js';
 import {
     stopActiveGame,
@@ -124,9 +125,8 @@ export function launchFullscreenMuseumGame(item) {
                 </svg>
             </button>
 
-            <button type="button" class="museum-interact-btn" data-role="interact-btn" hidden aria-label="Consulter le cartel">
-                <span class="museum-interact-label" data-role="interact-label">Consulter le cartel</span>
-                <span class="museum-interact-key" aria-hidden="true">E</span>
+            <button type="button" class="museum-interact-btn" data-role="interact-btn" hidden aria-label="Lire">
+                <span class="museum-interact-label" data-role="interact-label">Lire</span>
             </button>
 
             <button type="button" class="museum-nav-btn" data-dir="1" aria-label="Marcher vers la droite">
@@ -137,26 +137,19 @@ export function launchFullscreenMuseumGame(item) {
         </div>
 
         <p class="museum-control-hint" data-role="control-hint">
-            Maintiens gauche ou droite pour avancer · Approche-toi d'un cartel pour le lire
+            Maintiens gauche ou droite pour avancer · Approche-toi d'une plaque pour la lire
         </p>
 
         <div class="museum-cartel-backdrop" data-role="cartel-backdrop" hidden>
             <div class="museum-cartel-card" role="dialog" aria-modal="true" aria-labelledby="museum-cartel-title">
                 <div class="museum-cartel-header">
-                    <div class="museum-cartel-meta">
-                        <span data-role="cartel-wing">Aile Nord</span>
-                        <span aria-hidden="true">·</span>
-                        <span data-role="cartel-number">Cartel 01</span>
-                    </div>
-                    <button type="button" class="museum-cartel-close" data-role="cartel-close" aria-label="Fermer le cartel">&times;</button>
+                    <span class="museum-cartel-number" data-role="cartel-number">N° 01</span>
+                    <button type="button" class="museum-cartel-close" data-role="cartel-close" aria-label="Fermer">&times;</button>
                 </div>
-                <p class="museum-cartel-category" data-role="cartel-category"></p>
-                <h3 class="museum-cartel-title" id="museum-cartel-title" data-role="cartel-title"></h3>
-                <p class="museum-cartel-subtitle" data-role="cartel-subtitle"></p>
-                <div class="museum-cartel-divider" aria-hidden="true"></div>
-                <p class="museum-cartel-body" data-role="cartel-body"></p>
-                <div class="museum-cartel-footer">
-                    <button type="button" class="museum-cartel-done-btn" data-role="cartel-done">Fermer</button>
+                <div class="museum-cartel-scroll" data-role="cartel-scroll">
+                    <h3 class="museum-cartel-title" id="museum-cartel-title" data-role="cartel-title"></h3>
+                    <div class="museum-cartel-divider" aria-hidden="true"></div>
+                    <div class="museum-cartel-body" data-role="cartel-body"></div>
                 </div>
             </div>
         </div>
@@ -175,12 +168,9 @@ export function launchFullscreenMuseumGame(item) {
 
     const cartelBackdrop = museumUi.querySelector('[data-role="cartel-backdrop"]');
     const cartelCloseBtn = museumUi.querySelector('[data-role="cartel-close"]');
-    const cartelDoneBtn = museumUi.querySelector('[data-role="cartel-done"]');
-    const cartelWingEl = museumUi.querySelector('[data-role="cartel-wing"]');
+    const cartelScrollEl = museumUi.querySelector('[data-role="cartel-scroll"]');
     const cartelNumEl = museumUi.querySelector('[data-role="cartel-number"]');
-    const cartelCatEl = museumUi.querySelector('[data-role="cartel-category"]');
     const cartelTitleEl = museumUi.querySelector('[data-role="cartel-title"]');
-    const cartelSubEl = museumUi.querySelector('[data-role="cartel-subtitle"]');
     const cartelBodyEl = museumUi.querySelector('[data-role="cartel-body"]');
 
     let state = createMuseumGameState(MUSEUM_LOOP_CONFIG);
@@ -258,6 +248,31 @@ export function launchFullscreenMuseumGame(item) {
         fsOverlay.dataset.museumOpenCartel = openStr;
     }
 
+    function renderFormattedCartelText(targetEl, text, scientificNames) {
+        targetEl.textContent = '';
+        const segments = splitTextByScientificNames(text, scientificNames);
+        segments.forEach((seg) => {
+            if (seg.italic) {
+                const em = document.createElement('em');
+                em.className = 'museum-scientific-name';
+                em.textContent = seg.text;
+                targetEl.appendChild(em);
+            } else {
+                targetEl.appendChild(document.createTextNode(seg.text));
+            }
+        });
+    }
+
+    function renderFormattedCartelBody(targetEl, text, scientificNames) {
+        targetEl.textContent = '';
+        const paragraphs = String(text || '').split(/\n{2,}/).filter(Boolean);
+        paragraphs.forEach((paraText) => {
+            const p = document.createElement('p');
+            renderFormattedCartelText(p, paraText, scientificNames);
+            targetEl.appendChild(p);
+        });
+    }
+
     function openCartelModal(cartel) {
         if (!cartel) return;
         clearHeldInputs();
@@ -268,19 +283,17 @@ export function launchFullscreenMuseumGame(item) {
             visitedCartelIds: markCartelVisited(state.visitedCartelIds, cartel.id)
         };
 
-        cartelWingEl.textContent = cartel.wing;
-        cartelNumEl.textContent = `Cartel ${cartel.number}`;
-        cartelCatEl.textContent = cartel.category;
-        cartelTitleEl.textContent = cartel.title;
-        cartelSubEl.textContent = cartel.subtitle;
-        cartelBodyEl.textContent = cartel.body;
+        cartelNumEl.textContent = `N° ${cartel.number}`;
+        renderFormattedCartelText(cartelTitleEl, cartel.title, cartel.scientificNames);
+        renderFormattedCartelBody(cartelBodyEl, cartel.body, cartel.scientificNames);
 
         cartelBackdrop.hidden = false;
+        if (cartelScrollEl) cartelScrollEl.scrollTop = 0;
         interactBtn.hidden = true;
         if (controlHintEl) controlHintEl.classList.add('is-hidden');
 
         syncDataAttributes();
-        cartelDoneBtn.focus();
+        cartelCloseBtn.focus();
     }
 
     function closeCartelModal() {
@@ -459,7 +472,6 @@ export function launchFullscreenMuseumGame(item) {
 
     interactBtn.addEventListener('click', onInteractClick);
     cartelCloseBtn.addEventListener('click', closeCartelModal);
-    cartelDoneBtn.addEventListener('click', closeCartelModal);
     cartelBackdrop.addEventListener('click', onBackdropClick);
     canvas.addEventListener('pointerdown', onCanvasPointerDown);
     window.addEventListener('pointermove', onCanvasPointerMove);
@@ -489,8 +501,8 @@ export function launchFullscreenMuseumGame(item) {
         if (nearId !== lastNearCartelId) {
             lastNearCartelId = nearId;
             if (nearId && nearestCartel) {
-                interactLabelEl.textContent = `Lire · Cartel ${nearestCartel.cartel.number}`;
-                interactBtn.setAttribute('aria-label', `Consulter le ${nearestCartel.cartel.title}`);
+                interactLabelEl.textContent = 'Lire';
+                interactBtn.setAttribute('aria-label', 'Lire');
                 interactBtn.hidden = false;
             } else {
                 interactBtn.hidden = true;
@@ -622,7 +634,6 @@ export function launchFullscreenMuseumGame(item) {
         unbindRightBtn();
         interactBtn.removeEventListener('click', onInteractClick);
         cartelCloseBtn.removeEventListener('click', closeCartelModal);
-        cartelDoneBtn.removeEventListener('click', closeCartelModal);
         cartelBackdrop.removeEventListener('click', onBackdropClick);
         canvas.removeEventListener('pointerdown', onCanvasPointerDown);
         window.removeEventListener('pointermove', onCanvasPointerMove);

@@ -16,7 +16,8 @@ import {
     findNearestCartel,
     markCartelVisited,
     evaluateMuseumObjective,
-    sampleMuseumLedColor
+    sampleMuseumLedColor,
+    splitTextByScientificNames
 } from './museumGameLogic.js';
 
 test('wrapLoopPosition and shortestLoopDelta handle circular museum seam seamlessly', () => {
@@ -194,3 +195,48 @@ test('sampleMuseumLedColor holds each rainbow color for 15-20s then cross-fades 
     assert.equal(wrapped.colorIndex, 0);
     assert.deepEqual([wrapped.r, wrapped.g, wrapped.b], c0);
 });
+
+test('MUSEUM_CARTELS contains 6 sequential museum plaques 01-06 with exact verbatim content and italic scientific names', () => {
+    assert.equal(MUSEUM_CARTELS.length, 6);
+    MUSEUM_CARTELS.forEach((cartel, index) => {
+        assert.equal(cartel.kind, 'museum', `Plaque ${cartel.number} should be museum`);
+        assert.equal(cartel.number, String(index + 1).padStart(2, '0'));
+        assert.equal(cartel.id, `cartel_${String(index + 1).padStart(2, '0')}`);
+    });
+
+    const [m1, m2, m3, m4, m5, m6] = MUSEUM_CARTELS;
+
+    assert.ok(m1.body.includes('(eh oui, ils étaient un peu cons à l\'époque)'));
+    assert.ok(!m1.body.includes('rhinoresourcecenter'));
+    assert.ok(!m2.body.includes('Média indépendant'));
+    assert.ok(!m3.body.includes('fiche grande gal'));
+    assert.ok(m3.body.startsWith("Cette énorme squellette de baleine franche australe avec ses faons tout aussi gigantesque (j'espère que tu t'en souviens quand même je le prendrai mal sinon)."));
+    assert.ok(m3.body.includes('500 kg par couille (je peux pas rivaliser), soit 1% du poids de la baleine.'));
+    assert.ok(m3.body.endsWith('rivaux (des vrai zhommes ça).'));
+    assert.equal(m4.title, 'La grande allée, 500 mètres de passif-agressif');
+    assert.ok(m4.body.startsWith("Aux deux bouts de la grande allée centrale du Jardin des Plantes"));
+    assert.ok(m4.body.endsWith("(cheh c'est bien mérité)."));
+    assert.ok(m5.body.includes("celui d'un cheval (lui aussi on est censé l'avoir vu mais pour être honnête va falloir y retourner j'en ai aucun souvenir mince alors)."));
+    assert.ok(m5.body.includes("l'ADN ancien (dcp si t'a suivi c'est la naissance de la paléogénétique)."));
+    assert.ok(m5.body.endsWith("(j'ai sacrément kiffé faire ces petits point culture anecdotiques)."));
+    assert.ok(m6.body.startsWith("Ce squelette géant (merci) du mammouth de Durfort"));
+    assert.ok(m6.body.endsWith("dissuader la concurrence (ça c'est certain)."));
+
+    [m1, m2, m3, m4, m5, m6].forEach((m) => {
+        const paraCount = m.body.split(/\n{2,}/).filter(Boolean).length;
+        assert.ok(paraCount >= 2 && paraCount <= 3, `Expected 2-3 paragraphs for ${m.id}, got ${paraCount}`);
+    });
+
+    const m1TitleParts = splitTextByScientificNames(m1.title, m1.scientificNames);
+    assert.deepEqual(m1TitleParts[0], { text: 'Rhinoceros unicornis', italic: true });
+
+    const m1BodyParts = splitTextByScientificNames(m1.body, m1.scientificNames);
+    assert.ok(m1BodyParts.some((p) => p.italic && p.text === 'Ceratotherium simum'));
+
+    const m5TitleParts = splitTextByScientificNames(m5.title, m5.scientificNames);
+    assert.deepEqual(m5TitleParts[0], { text: 'Equus quagga quagga', italic: true });
+
+    const m6TitleParts = splitTextByScientificNames(m6.title, m6.scientificNames);
+    assert.deepEqual(m6TitleParts[0], { text: 'Mammuthus meridionalis', italic: true });
+});
+

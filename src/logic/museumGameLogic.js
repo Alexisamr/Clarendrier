@@ -288,3 +288,30 @@ export function sampleMuseumLedColor(elapsedSeconds, ledConfig = MUSEUM_LED_CONF
         isTransitioning
     };
 }
+
+/**
+ * Découpe un texte en segments normaux et en noms scientifiques à afficher en italique.
+ */
+export function splitTextByScientificNames(text, scientificNames = []) {
+    if (!text) return [];
+    const terms = Array.isArray(scientificNames)
+        ? scientificNames.filter((n) => typeof n === 'string' && n.trim().length > 0)
+        : [];
+    if (terms.length === 0) {
+        return [{ text, italic: false }];
+    }
+
+    const sortedTerms = [...terms].sort((a, b) => b.length - a.length);
+    const escaped = sortedTerms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(${escaped.join('|')})`, 'g');
+    const parts = text.split(regex);
+    const termSet = new Set(sortedTerms);
+
+    return parts
+        .filter((part) => part.length > 0)
+        .map((part) => ({
+            text: part,
+            italic: termSet.has(part)
+        }));
+}
+

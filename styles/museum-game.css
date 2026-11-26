@@ -239,7 +239,7 @@
     opacity: 0;
 }
 
-/* --- Modale de lecture d'un cartel / panneau du musée --- */
+/* --- Plaque de musée (cartel ouvert) --- */
 .museum-cartel-backdrop {
     position: absolute;
     inset: 0;
@@ -248,8 +248,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    background: rgba(14, 10, 7, 0.72);
+    padding: 18px;
+    background: rgba(14, 10, 7, 0.74);
 }
 
 .museum-cartel-backdrop[hidden] {
@@ -258,15 +258,20 @@
 
 .museum-cartel-card {
     width: 100%;
-    max-width: 440px;
-    max-height: min(82dvh, 560px);
-    overflow-y: auto;
-    background: #FAF5EA;
-    color: #241910;
-    border-radius: 16px;
-    border: 1.5px solid #C59B5F;
-    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.52), inset 0 0 0 4px rgba(197, 155, 95, 0.16);
-    padding: 22px 24px 24px;
+    max-width: 470px;
+    max-height: min(82dvh, 620px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: linear-gradient(175deg, #FCF8EE 0%, #F4ECDA 100%);
+    color: #21170E;
+    border-radius: 10px;
+    border: 2px solid #A88048;
+    box-shadow:
+        0 26px 56px rgba(0, 0, 0, 0.56),
+        inset 0 0 0 5px #FAF4E6,
+        inset 0 0 0 6px rgba(168, 128, 72, 0.52);
+    padding: 20px 22px 22px;
     text-align: left;
 }
 
@@ -276,25 +281,25 @@
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 10px;
+    flex-shrink: 0;
 }
 
-.museum-cartel-meta {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
+.museum-cartel-number {
+    display: inline-block;
     font-family: var(--font-sans);
-    font-size: 0.74rem;
-    font-weight: 600;
-    color: #7A5A32;
-    letter-spacing: 0.04em;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #7A5A2F;
     font-variant-numeric: tabular-nums;
 }
 
 .museum-cartel-close {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    border: 1px solid rgba(122, 90, 50, 0.25);
+    border: 1px solid rgba(122, 90, 50, 0.28);
     background: rgba(122, 90, 50, 0.08);
     color: #2D2014;
     font-size: 1.35rem;
@@ -303,6 +308,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    flex-shrink: 0;
     transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
@@ -314,70 +320,60 @@
     transform: scale(0.92);
 }
 
-.museum-cartel-category {
-    margin: 0 0 4px;
-    font-family: var(--font-sans);
-    font-size: 0.76rem;
-    font-weight: 500;
-    color: #8A683E;
+.museum-cartel-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-right: 4px;
 }
 
 .museum-cartel-title {
-    margin: 0 0 4px;
+    margin: 0;
     font-family: var(--font-serif);
-    font-size: 1.7rem;
+    font-size: clamp(1.36rem, 4.4vw, 1.68rem);
     font-weight: 600;
-    line-height: 1.18;
-    color: #21160E;
+    line-height: 1.24;
+    color: #1F150C;
     text-wrap: balance;
 }
 
-.museum-cartel-subtitle {
-    margin: 0;
-    font-family: var(--font-serif);
+.museum-scientific-name {
     font-style: italic;
-    font-size: 1.02rem;
-    color: #6B5035;
 }
 
 .museum-cartel-divider {
-    height: 1px;
-    margin: 16px 0;
-    background: linear-gradient(90deg, rgba(197, 155, 95, 0.55) 0%, rgba(197, 155, 95, 0.15) 100%);
+    height: 1.5px;
+    width: 68px;
+    margin: 14px 0 16px;
+    background: linear-gradient(90deg, #B2884E 0%, rgba(178, 136, 78, 0.22) 100%);
 }
 
 .museum-cartel-body {
-    margin: 0 0 22px;
+    margin: 0;
     font-family: var(--font-sans);
-    font-size: 0.94rem;
-    line-height: 1.65;
-    color: #36281C;
-    white-space: pre-line;
+    font-size: 1rem;
+    line-height: 1.66;
+    color: #2E2116;
 }
 
-.museum-cartel-footer {
-    display: flex;
-    justify-content: flex-end;
+.museum-cartel-body p {
+    margin: 0;
 }
 
-.museum-cartel-done-btn {
-    min-height: 44px;
-    padding: 10px 22px;
-    border-radius: 10px;
-    border: 1px solid #2C2016;
-    background: #2C2016;
-    color: #FAF5EA;
-    font-family: var(--font-sans);
-    font-size: 0.86rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.15s ease, transform 0.14s ease;
+.museum-cartel-body p + p {
+    margin-top: 0.85em;
 }
 
-.museum-cartel-done-btn:hover {
-    background: #3E2D20;
+@media (max-width: 480px) {
+    .museum-cartel-card {
+        padding: 18px 18px 20px;
+    }
+
+    .museum-cartel-body {
+        font-size: 0.98rem;
+        line-height: 1.64;
+    }
 }
 
-.museum-cartel-done-btn:active {
-    transform: scale(0.96);
-}

@@ -37,101 +37,90 @@ export const MUSEUM_LOOP_CONFIG = {
 
 /**
  * ----------------------------------------------------------------------------
- * CARTELS & PANNEAUX CONSULTABLES LE LONG DE LA COURSIVE
+ * PLAQUES & PANNEAUX CONSULTABLES LE LONG DE LA COURSIVE (6 AU TOTAL)
  * ----------------------------------------------------------------------------
- * Pour personnaliser le contenu plus tard :
- *  - Modifie `title`, `subtitle`, `category` et `body` de chaque emplacement.
- *  - Tu peux aussi ajouter ou déplacer un cartel en ajustant `loopPosition`
- *    (entre 0 et MUSEUM_LOOP_CONFIG.LOOP_LENGTH = 4800).
+ * Pour personnaliser ou ajouter une plaque :
+ *  - Modifie simplement `title`, `body` (et `scientificNames` si besoin d'italique).
+ *  - Tu peux ajuster `loopPosition` (entre 0 et MUSEUM_LOOP_CONFIG.LOOP_LENGTH = 4800).
  * ----------------------------------------------------------------------------
  */
 export const MUSEUM_CARTELS = [
     {
         id: 'cartel_01',
         number: '01',
-        loopPosition: 340,
-        wing: 'Aile Nord',
-        category: 'Emplacement temporaire',
-        title: 'Cartel n°1 — À compléter',
-        subtitle: 'Entrée de la Grande Galerie',
-        body: 'Texte temporaire pour ce premier cartel de la coursive. Tu pourras facilement remplacer ce contenu par un souvenir, une anecdote ou un indice dans src/data/museumGameConfig.js.',
+        kind: 'museum',
+        loopPosition: 360,
+        title: 'Rhinoceros unicornis, un animal à la corne empruntée',
+        body:
+            "Le rhinocéros qu'on a vu ensemble est un rhinocéros indien mâle. Sa corne d'origine, usée contre les barreaux de sa cage à Versailles, n'avait pas pu pousser normalement.\n\n" +
+            "Les taxidermistes (les spécialistes qui préparent et naturalisent les animaux morts pour les exposer) l'ont donc remplacée par la longue corne d'un rhinocéros blanc d'Afrique (Ceratotherium simum), sans le savoir (eh oui, ils étaient un peu cons à l'époque).\n\n" +
+            "Cette corne d'une autre espèce est restée en place jusqu'à la restauration de 1992, où on l'a remplacée par un moulage de corne d'Indien, plus petit que celui de l'animal lui-même. Autrement dit, ce que l'on voit aujourd'hui n'est pas non plus la corne qu'il avait de son vivant.",
+        scientificNames: ['Rhinoceros unicornis', 'Ceratotherium simum'],
         visualKind: 'panel'
     },
     {
         id: 'cartel_02',
         number: '02',
-        loopPosition: 920,
-        wing: 'Aile Nord',
-        category: 'Emplacement temporaire',
-        title: 'Cartel n°2 — À compléter',
-        subtitle: 'Vue sur la caravane de la savane',
-        body: 'Texte temporaire pour le panneau n°2. Cet emplacement surplombe le début du grand cortège d\'animaux naturalisés au centre de la nef.',
+        kind: 'museum',
+        loopPosition: 1160,
+        title: 'Architeuthis sanctipauli, Wheke le calmar géant',
+        body:
+            "Wheke, qui signifie « calmar » en maori, a été pêché en janvier 2000 au large de la Nouvelle-Zélande, à 615 mètres de profondeur.\n\n" +
+            "Plutôt que de le conserver dans l'alcool ou le formol comme les autres musées du monde, le Muséum l'a plastiné : l'eau, le formol et l'alcool ont été remplacés par une résine durcissante, au prix de deux ans et demi de travail. Il a fallu reconstituer 300 ventouses abîmées par le formol et fabriquer de faux yeux, seul le bec est d'origine.\n\n" +
+            "C'est le premier calmar géant plastiné au monde, alors que les premières images de l'espèce dans son milieu naturel ne datent que de 2004.",
+        scientificNames: ['Architeuthis sanctipauli'],
         visualKind: 'lectern'
     },
     {
         id: 'cartel_03',
         number: '03',
-        loopPosition: 1520,
-        wing: 'Rotonde Est',
-        category: 'Emplacement temporaire',
-        title: 'Cartel n°3 — À compléter',
-        subtitle: 'Sous les grandes arches de fer',
-        body: 'Texte temporaire pour le panneau n°3. Cet emplacement est prêt à accueillir le texte définitif de ton choix.',
+        kind: 'museum',
+        loopPosition: 1960,
+        title: 'Eubalaena australis, un record bien caché',
+        body:
+            "Cette énorme squellette de baleine franche australe avec ses faons tout aussi gigantesque (j'espère que tu t'en souviens quand même je le prendrai mal sinon).\n\n" +
+            "Ce que ses os ne montrent pas, c'est son vrai record : chez les baleines franches, les testicules sont probablement les plus gros de tout le règne animal, avec environ 500 kg par couille (je peux pas rivaliser), soit 1% du poids de la baleine. C'est environ dix fois plus que chez la baleine bleue, pourtant bien plus grande.\n\n" +
+            "L'explication la plus probable est la compétition spermatique : une femelle a été observée en train de s'accoupler avec deux mâles simultanément. Ces mâles peuvent produire jusqu'à 4,5 litres de sperme, pour « noyer » celui de leurs rivaux (des vrai zhommes ça).",
+        scientificNames: ['Eubalaena australis'],
         visualKind: 'panel'
     },
     {
         id: 'cartel_04',
         number: '04',
-        loopPosition: 2120,
-        wing: 'Rotonde Est',
-        category: 'Emplacement temporaire',
-        title: 'Cartel n°4 — À compléter',
-        subtitle: 'Balcon de la lumière dorée',
-        body: 'Texte temporaire pour le panneau n°4. Tu pourras y glisser un petit mot, une question ou un souvenir de votre premier rendez-vous.',
+        kind: 'museum',
+        loopPosition: 2760,
+        title: 'La grande allée, 500 mètres de passif-agressif',
+        body:
+            "Aux deux bouts de la grande allée centrale du Jardin des Plantes (tu sais, là où on a fait 2 allers-retours comme des cons en courant pour trouver l'entrée de la galerie), deux statues sont censées se faire face... sauf que ce n'est pas le cas. Côté Grande Galerie, Buffon, l'ancien patron du lieu, regarde fièrement son jardin. Mais 500 mètres plus loin, côté Seine, le scientifique Jean-Baptiste de Lamarck lui tourne carrément le dos pour regarder la rue.\n\n" +
+            "Ce n'est pas une erreur d'installation : de son vivant, Lamarck a été le premier à proposer une vraie théorie de l'évolution, bien avant Darwin, ce qui lui a valu les moqueries et le mépris de ses collègues du Muséum. Il a fini sa vie seul, aveugle et ruiné, complètement rejeté par l'institution.\n\n" +
+            "Alors (le pauvre, alors qu'il avait raison ...), quand on a finalement décidé de lui ériger une statue un siècle plus tard, on a glissé une petite vengeance à l'arrière de son socle pile face au parc et aux bâtiments des chercheurs en y gravant cette phrase de sa fille : « La postérité vous admirera, elle vous vengera, mon père. » Un immense « je vous l'avais bien dit » en bronze, posé là pour l'éternité (cheh c'est bien mérité).",
+        scientificNames: [],
         visualKind: 'lectern'
     },
     {
         id: 'cartel_05',
         number: '05',
-        loopPosition: 2740,
-        wing: 'Aile Sud',
-        category: 'Emplacement temporaire',
-        title: 'Cartel n°5 — À compléter',
-        subtitle: 'Au cœur de la grande nef',
-        body: 'Texte temporaire pour le panneau n°5. Facile à éditer directement depuis le fichier de configuration du musée.',
+        kind: 'museum',
+        loopPosition: 3560,
+        title: 'Equus quagga quagga, la naissance de la paléogénétique',
+        body:
+            "Le quagga est une sorte de zèbre à moitié rayé : l'avant de son corps portait des rayures brunes de zèbre, alors que l'arrière ressemblait plutôt à celui d'un cheval (lui aussi on est censé l'avoir vu mais pour être honnête va falloir y retourner j'en ai aucun souvenir mince alors).\n\n" +
+            "Éteint en 1883, il a fourni en 1984 deux fragments d'ADN mitochondrial (229 paires de nucléotides) extraits d'un muscle séché conservé en musée, avec 12 substitutions par rapport au zèbre de montagne, soit une divergence estimée à 3-4 millions d'années. C'est la première analyse d'ADN d'un animal éteint, et elle a lancé le domaine de l'ADN ancien (dcp si t'a suivi c'est la naissance de la paléogénétique).\n\n" +
+            "Une étude de 2005 a ensuite montré qu'il s'est séparé très récemment du zèbre des plaines, probablement lors de l'avant-dernier maximum glaciaire. Ses rayures ont donc disparu en un temps géologiquement très court (j'ai sacrément kiffé faire ces petits point culture anecdotiques).",
+        scientificNames: ['Equus quagga quagga'],
         visualKind: 'panel'
     },
     {
         id: 'cartel_06',
         number: '06',
-        loopPosition: 3340,
-        wing: 'Aile Sud',
-        category: 'Emplacement temporaire',
-        title: 'Cartel n°6 — À compléter',
-        subtitle: 'Galerie des espèces disparues',
-        body: 'Texte temporaire pour le panneau n°6. Prêt à recevoir son futur texte ou indice.',
-        visualKind: 'lectern'
-    },
-    {
-        id: 'cartel_07',
-        number: '07',
-        loopPosition: 3940,
-        wing: 'Rotonde Ouest',
-        category: 'Emplacement temporaire',
-        title: 'Cartel n°7 — À compléter',
-        subtitle: 'Sous la verrière du XIXe siècle',
-        body: 'Texte temporaire pour le panneau n°7. Situé dans le dernier virage avant de boucler le tour de la galerie.',
-        visualKind: 'panel'
-    },
-    {
-        id: 'cartel_08',
-        number: '08',
-        loopPosition: 4460,
-        wing: 'Rotonde Ouest',
-        category: 'Emplacement temporaire',
-        title: 'Cartel n°8 — À compléter',
-        subtitle: 'Retour vers le point de départ',
-        body: 'Texte temporaire pour le panneau n°8. Juste avant de revenir au point de départ de la boucle autour du hall central.',
+        kind: 'museum',
+        loopPosition: 4360,
+        title: "Mammuthus meridionalis, la crise d'hormones préhistorique",
+        body:
+            "Ce squelette géant (merci) du mammouth de Durfort (qui a été restauré il y a peu, comme je t'en avais parlé), haut de près de 4 mètres, est la star incontestée de la galerie (mais c'est toi la star de ma vie).\n\n" +
+            "Ce que ses os ne montrent pas, c'est que ce grand mâle traversait probablement chaque année le « musth », une période de rut complètement hors de contrôle. Son taux de testostérone pouvait alors être multiplié par vingt, transformant ce colosse de 10 tonnes en boule de nerfs prête à charger n'importe quoi.\n\n" +
+            "Pour annoncer la couleur à ses rivaux, il sécrétait un liquide huileux par les tempes tout en urinant en continu sur ses propres pattes arrière : une technique de séduction douteuse (très douteuse, à mon humble avis, on n'en serait pas là si j'avais essayé de t'attirer avec mon pipi en le faisant couler sur mes pieds ... Quoiqueee ?), mais radicale pour dissuader la concurrence (ça c'est certain).",
+        scientificNames: ['Mammuthus meridionalis'],
         visualKind: 'lectern'
     }
 ];

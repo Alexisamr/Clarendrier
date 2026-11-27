@@ -5,11 +5,13 @@ import {
     CALENDAR_CONFIG,
     GATE_QUESTIONS,
     GATE_MASTER_PASSWORDS,
-    GATE_FALLBACK_QUESTION
+    GATE_FALLBACK_QUESTION,
+    INTRO_ANIMATIONS_SCHEDULE
 } from '../data/calendarData.js';
 import {
     isDayUnlockedForDate,
     getScheduledGateQuestionForDate,
+    getScheduledIntroForDate,
     getPreviewGateQuestion,
     isGateAnswerValid,
     getGateCustomError
@@ -58,6 +60,29 @@ test('isDayUnlockedForDate locks all days before Dec 1 and unlocks progressively
             false
         );
     }
+});
+
+test('intro animations rotate strictly on Dec 1 (mountain), Dec 9 (capferret), and Dec 17 (museum)', () => {
+    const nov27 = new Date(2026, 10, 27, 12, 0, 0);
+    assert.equal(getScheduledIntroForDate(INTRO_ANIMATIONS_SCHEDULE, nov27), null);
+
+    for (let day = 1; day <= 8; day++) {
+        const d = new Date(2026, 11, day, 12, 0, 0);
+        assert.equal(getScheduledIntroForDate(INTRO_ANIMATIONS_SCHEDULE, d), 'mountain', `Dec ${day} -> mountain`);
+    }
+
+    for (let day = 9; day <= 16; day++) {
+        const d = new Date(2026, 11, day, 12, 0, 0);
+        assert.equal(getScheduledIntroForDate(INTRO_ANIMATIONS_SCHEDULE, d), 'capferret', `Dec ${day} -> capferret`);
+    }
+
+    for (let day = 17; day <= 31; day++) {
+        const d = new Date(2026, 11, day, 12, 0, 0);
+        assert.equal(getScheduledIntroForDate(INTRO_ANIMATIONS_SCHEDULE, d), 'museum', `Dec ${day} -> museum`);
+    }
+
+    const jan2027 = new Date(2027, 0, 1, 12, 0, 0);
+    assert.equal(getScheduledIntroForDate(INTRO_ANIMATIONS_SCHEDULE, jan2027), null);
 });
 
 test('gate questions are scheduled strictly on Dec 1, 5, 10, 15, and 20 of 2026 and nowhere else', () => {

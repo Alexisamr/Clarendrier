@@ -52,6 +52,33 @@ export function getScheduledGateQuestionForDate(
 }
 
 /**
+ * Retourne la clé de l'animation d'ouverture à jouer pour la date donnée
+ * ('mountain' du 1er au 8 déc, 'capferret' du 9 au 16 déc, 'museum' à partir du 17 déc),
+ * ou `null` hors décembre 2026.
+ */
+export function getScheduledIntroForDate(
+    schedule,
+    date = new Date(),
+    unlockYear = 2026,
+    unlockMonthIndex = 11
+) {
+    if (!Array.isArray(schedule) || !schedule.length) return null;
+    if (date.getFullYear() !== unlockYear || date.getMonth() !== unlockMonthIndex) {
+        return null;
+    }
+
+    const dayOfMonth = date.getDate();
+    let matchedKey = null;
+    const sorted = [...schedule].sort((a, b) => a.startDay - b.startDay);
+    for (const entry of sorted) {
+        if (entry && typeof entry.startDay === 'number' && dayOfMonth >= entry.startDay) {
+            matchedKey = entry.key;
+        }
+    }
+    return matchedKey;
+}
+
+/**
  * Retourne la question à afficher lorsqu'on rouvre manuellement l'écran de vérification
  * depuis le menu dev (question du jour si active, sinon première question non répondue ou 1ère question).
  */

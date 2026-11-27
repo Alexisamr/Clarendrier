@@ -197,6 +197,19 @@ export const GATE_QUESTIONS = [
 ];
 
 /* -------------------------------------------------------------------------
+   4b. PROGRAMMATION DES ANIMATIONS D'OUVERTURE (DÉCEMBRE 2026)
+   - Jouée à chaque ouverture du calendrier à partir du 1er décembre :
+     • 1er au 8 décembre  : Montagne
+     • 9 au 16 décembre  : Cap Ferret
+     • 17 au 31 décembre : Grande Galerie de l'Évolution (Muséum)
+   ------------------------------------------------------------------------- */
+export const INTRO_ANIMATIONS_SCHEDULE = [
+    { startDay: 1, key: 'mountain' },
+    { startDay: 9, key: 'capferret' },
+    { startDay: 17, key: 'museum' }
+];
+
+/* -------------------------------------------------------------------------
    5. ASSIGNATION FACILE DES SURPRISES PAR JOUR (1 À 24 DÉCEMBRE)
    - Pour déplacer n'importe quelle surprise vers un autre jour plus tard
      (ex: mettre la surprise du jour 4 au jour 20), change simplement le numéro ici !

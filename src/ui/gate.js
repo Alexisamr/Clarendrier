@@ -9,6 +9,7 @@ import { normalizeAnswer } from '../utils/helpers.js';
 import {
     getScheduledGateQuestion,
     getGatePreviewQuestion,
+    getScheduledIntro,
     markGateQuestionAnswered,
     isGateAdminPassword,
     isGateAnswerValid,
@@ -24,23 +25,39 @@ import {
 } from './dom.js';
 import { openSecretAnswersModal } from './secretNotebook.js';
 import { playMountainIntro } from './intro-montagne.js';
+import { lancerIntroCapFerret } from './intro-capferret.js';
+import { lancerIntroMuseum } from './intro-museum.js';
 
 let isGateSubmitBound = false;
 let currentActiveQuestion = null;
 let isPreviewMode = false;
 
+function playIntroByKey(introKey, callbacks = {}) {
+    if (introKey === 'capferret') {
+        lancerIntroCapFerret(callbacks);
+    } else if (introKey === 'museum') {
+        lancerIntroMuseum(callbacks);
+    } else {
+        playMountainIntro(callbacks);
+    }
+}
+
 function unlockGateOverlay(instant = false) {
     gateOverlay.style.transition = instant ? 'none' : '';
     gateOverlay.classList.add('unlocked');
     gateOverlay.setAttribute('aria-hidden', 'true');
+    if (gateCard) {
+        gateCard.style.display = '';
+    }
 }
 
-function completeGateLogin({ withIntro = false } = {}) {
+function completeGateLogin({ withIntro = false, fallbackIntroKey = 'mountain' } = {}) {
     gateError.textContent = '';
     gateInput.blur();
 
-    if (withIntro) {
-        playMountainIntro({
+    const introKey = getScheduledIntro() || fallbackIntroKey;
+    if (withIntro && introKey) {
+        playIntroByKey(introKey, {
             onCovered: () => unlockGateOverlay(true)
         });
     } else {
@@ -68,7 +85,7 @@ function bindGateFormOnce() {
             if (!isPreviewMode && activeQ && activeQ.id) {
                 markGateQuestionAnswered(activeQ.id);
             }
-            completeGateLogin({ withIntro: true });
+            completeGateLogin({ withIntro: true, fallbackIntroKey: 'mountain' });
         } else {
             gateError.textContent = getGateCustomError(activeQ, userVal) || UI_TEXTS.GATE_ERROR;
             gateCard.classList.remove('shake');
@@ -91,6 +108,9 @@ export function reopenGate() {
     gateInput.value = '';
     gateError.textContent = '';
     gateCard.classList.remove('shake');
+    if (gateCard) {
+        gateCard.style.display = '';
+    }
 
     gateOverlay.style.transition = '';
     gateOverlay.classList.remove('unlocked');
@@ -104,11 +124,24 @@ export function initGate() {
 
     const scheduledQuestion = getScheduledGateQuestion();
     if (!scheduledQuestion) {
-        unlockGateOverlay(true);
+        const scheduledIntro = getScheduledIntro();
+        if (scheduledIntro) {
+            if (gateCard) {
+                gateCard.style.display = 'none';
+            }
+            playIntroByKey(scheduledIntro, {
+                onCovered: () => unlockGateOverlay(true)
+            });
+        } else {
+            unlockGateOverlay(true);
+        }
         return;
     }
 
     isPreviewMode = false;
     currentActiveQuestion = scheduledQuestion;
+    if (gateCard) {
+        gateCard.style.display = '';
+    }
     gateQuestionEl.textContent = currentActiveQuestion.question;
 }

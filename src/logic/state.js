@@ -13,11 +13,13 @@ import {
     GATE_ADMIN_PASSWORDS,
     GATE_MASTER_PASSWORDS,
     GATE_FALLBACK_QUESTION,
-    GATE_QUESTIONS
+    GATE_QUESTIONS,
+    INTRO_ANIMATIONS_SCHEDULE
 } from '../data/calendarData.js';
 import {
     isDayUnlockedForDate,
     getScheduledGateQuestionForDate,
+    getScheduledIntroForDate,
     getPreviewGateQuestion,
     isGateAnswerValid as checkGateAnswerValid,
     getGateCustomError as findGateCustomError
@@ -165,6 +167,15 @@ export function getGatePreviewQuestion(date = new Date()) {
         CALENDAR_CONFIG.UNLOCK_YEAR,
         CALENDAR_CONFIG.UNLOCK_MONTH_INDEX,
         GATE_FALLBACK_QUESTION
+    );
+}
+
+export function getScheduledIntro(date = new Date()) {
+    return getScheduledIntroForDate(
+        INTRO_ANIMATIONS_SCHEDULE,
+        date,
+        CALENDAR_CONFIG.UNLOCK_YEAR,
+        CALENDAR_CONFIG.UNLOCK_MONTH_INDEX
     );
 }
 

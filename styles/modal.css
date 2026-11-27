@@ -348,21 +348,20 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.secret-actions-group.has-qcm-answers {
     padding-bottom: 14px;
     margin-bottom: 2px;
     border-bottom: 1px solid var(--border-color);
 }
 
-.secret-notebook-status {
-    font-size: 0.88rem;
-    color: var(--text-secondary);
-    text-align: center;
-    padding: 8px 0;
-}
-
-.secret-notebook-empty {
-    text-align: center;
-    padding: 6px 0;
+.secret-qcm-section-title {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 2px;
 }
 
 .secret-answer-item {

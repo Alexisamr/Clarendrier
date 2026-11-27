@@ -10,20 +10,21 @@ import {
     STORAGE_KEYS,
     QUIZ_SYNC_TOPIC,
     QUIZ_SYNC_BASE_URL,
-    GATE_REMEMBER_HOURS,
-    QUESTION_ROTATION_HOURS,
     GATE_ADMIN_PASSWORDS,
     GATE_MASTER_PASSWORDS,
     GATE_FALLBACK_QUESTION,
     GATE_QUESTIONS
 } from '../data/calendarData.js';
 import {
-    normalizeAnswer,
-    normalizeForKeywordMatch,
+    isDayUnlockedForDate,
+    getScheduledGateQuestionForDate,
+    getPreviewGateQuestion,
+    isGateAnswerValid as checkGateAnswerValid,
+    getGateCustomError as findGateCustomError
+} from './gateLogic.js';
+import {
     formatFrenchShortDate
 } from '../utils/helpers.js';
-
-const MS_PER_HOUR = 3600 * 1000;
 
 /* -------------------------------------------------------------------------
    1. ÉTAT LOCAL CHARGÉ DEPUIS LOCALSTORAGE
@@ -96,48 +97,75 @@ export function markCardScratched(cardId) {
 }
 
 /* -------------------------------------------------------------------------
-   4. LOGIQUE DE DÉVERROUILLAGE PAR DATE (DÉCEMBRE)
+   4. LOGIQUE DE DÉVERROUILLAGE PAR DATE (DÉCEMBRE) & OVERRIDE DEV
    ------------------------------------------------------------------------- */
-export function isDayUnlocked(dayNumber) {
-    if (DEV_MODE) return true;
-    const now = new Date();
-    return now.getMonth() === CALENDAR_CONFIG.UNLOCK_MONTH_INDEX && now.getDate() >= dayNumber;
-}
-
-/* -------------------------------------------------------------------------
-   5. LOGIQUE DU PORTAIL D'ACCÈS (GATE)
-   ------------------------------------------------------------------------- */
-export function getActiveGateQuestion() {
-    const activeQuestions = GATE_QUESTIONS.filter((q) => q.active !== false);
-    if (!activeQuestions.length) {
-        return GATE_FALLBACK_QUESTION;
-    }
-    const rotationMs = Math.max(1, QUESTION_ROTATION_HOURS) * MS_PER_HOUR;
-    const index = Math.floor(Date.now() / rotationMs) % activeQuestions.length;
-    return activeQuestions[index];
-}
-
-export function isGateSessionValid() {
+export function isDevUnlockAllDays() {
     try {
-        const raw = localStorage.getItem(STORAGE_KEYS.GATE_AUTH);
-        if (!raw) return false;
-        const data = JSON.parse(raw);
-        if (!data || typeof data.unlockedAt !== 'number') return false;
-        const rememberMs = Math.max(1, GATE_REMEMBER_HOURS) * MS_PER_HOUR;
-        return (Date.now() - data.unlockedAt) < rememberMs;
+        return localStorage.getItem(STORAGE_KEYS.DEV_UNLOCK_ALL) === 'true';
     } catch {
         return false;
     }
 }
 
-export function saveGateSession() {
-    localStorage.setItem(STORAGE_KEYS.GATE_AUTH, JSON.stringify({
-        unlockedAt: Date.now()
-    }));
+export function setDevUnlockAllDays(enabled) {
+    if (enabled) {
+        localStorage.setItem(STORAGE_KEYS.DEV_UNLOCK_ALL, 'true');
+    } else {
+        localStorage.removeItem(STORAGE_KEYS.DEV_UNLOCK_ALL);
+    }
 }
 
-export function clearGateSession() {
-    localStorage.removeItem(STORAGE_KEYS.GATE_AUTH);
+export function toggleDevUnlockAllDays() {
+    const nextState = !isDevUnlockAllDays();
+    setDevUnlockAllDays(nextState);
+    return nextState;
+}
+
+export function isDayUnlocked(dayNumber, date = new Date()) {
+    return isDayUnlockedForDate(dayNumber, date, {
+        devMode: DEV_MODE,
+        devUnlockAll: isDevUnlockAllDays(),
+        unlockYear: CALENDAR_CONFIG.UNLOCK_YEAR,
+        unlockMonthIndex: CALENDAR_CONFIG.UNLOCK_MONTH_INDEX
+    });
+}
+
+/* -------------------------------------------------------------------------
+   5. LOGIQUE DU PORTAIL D'ACCÈS (GATE PROGRAMMÉE PAR JOUR)
+   ------------------------------------------------------------------------- */
+export function getAnsweredGateQuestionIds() {
+    const saved = readJsonFromStorage(STORAGE_KEYS.GATE_ANSWERED_QUESTIONS, []);
+    return Array.isArray(saved) ? saved : [];
+}
+
+export function markGateQuestionAnswered(questionId) {
+    if (!questionId) return;
+    const answered = getAnsweredGateQuestionIds();
+    if (!answered.includes(questionId)) {
+        answered.push(questionId);
+        localStorage.setItem(STORAGE_KEYS.GATE_ANSWERED_QUESTIONS, JSON.stringify(answered));
+    }
+}
+
+export function getScheduledGateQuestion(date = new Date()) {
+    return getScheduledGateQuestionForDate(
+        GATE_QUESTIONS,
+        getAnsweredGateQuestionIds(),
+        date,
+        CALENDAR_CONFIG.UNLOCK_YEAR,
+        CALENDAR_CONFIG.UNLOCK_MONTH_INDEX
+    );
+}
+
+export function getGatePreviewQuestion(date = new Date()) {
+    return getPreviewGateQuestion(
+        GATE_QUESTIONS,
+        getAnsweredGateQuestionIds(),
+        date,
+        CALENDAR_CONFIG.UNLOCK_YEAR,
+        CALENDAR_CONFIG.UNLOCK_MONTH_INDEX,
+        GATE_FALLBACK_QUESTION
+    );
 }
 
 export function isGateAdminPassword(normalizedInput) {
@@ -145,35 +173,11 @@ export function isGateAdminPassword(normalizedInput) {
 }
 
 export function isGateAnswerValid(activeQuestion, normalizedInput) {
-    const isMasterPassword = GATE_MASTER_PASSWORDS.some(
-        (pwd) => normalizeAnswer(pwd) === normalizedInput
-    );
-    if (isMasterPassword) return true;
-
-    const exactMatch = activeQuestion.answers.some(
-        (ans) => normalizeAnswer(ans) === normalizedInput
-    );
-    if (exactMatch) return true;
-
-    if (Array.isArray(activeQuestion.acceptedKeywords) && activeQuestion.acceptedKeywords.length > 0) {
-        const cleanedInput = normalizeForKeywordMatch(normalizedInput);
-        return activeQuestion.acceptedKeywords.some((kw) => {
-            const cleanedKw = normalizeForKeywordMatch(kw);
-            return cleanedKw && cleanedInput.includes(cleanedKw);
-        });
-    }
-
-    return false;
+    return checkGateAnswerValid(activeQuestion, normalizedInput, GATE_MASTER_PASSWORDS);
 }
 
 export function getGateCustomError(activeQuestion, normalizedInput) {
-    if (!activeQuestion || !activeQuestion.customErrors) return null;
-    for (const [key, message] of Object.entries(activeQuestion.customErrors)) {
-        if (normalizeAnswer(key) === normalizedInput) {
-            return message;
-        }
-    }
-    return null;
+    return findGateCustomError(activeQuestion, normalizedInput);
 }
 
 /* -------------------------------------------------------------------------

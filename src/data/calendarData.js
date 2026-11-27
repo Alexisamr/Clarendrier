@@ -19,12 +19,13 @@
    ------------------------------------------------------------------------- */
 import { WHEEL_SEGMENTS } from '../logic/luckyWheelLogic.js';
 
-export const DEV_MODE = true;
+export const DEV_MODE = false;
 
 export const CALENDAR_CONFIG = {
     TOTAL_DAYS: 24,
     DAY_23: 23,
     CHRISTMAS_EVE_DAY: 24,
+    UNLOCK_YEAR: 2026,
     UNLOCK_MONTH_INDEX: 11 // 11 = Décembre en JavaScript (0 = Janvier)
 };
 
@@ -36,6 +37,8 @@ export const STORAGE_KEYS = {
     OPENED_DAYS: 'advent_opened_days_v1',
     GAMES_WON: 'advent_games_won_v1',
     GATE_AUTH: 'advent_gate_auth_v1',
+    GATE_ANSWERED_QUESTIONS: 'advent_gate_answered_questions_v1',
+    DEV_UNLOCK_ALL: 'advent_dev_unlock_all_v1',
     QUIZ_ANSWERS: 'advent_quiz_ete_answers_v1',
     SCRATCHED_CARDS: 'advent_scratched_cards_v1'
 };
@@ -57,39 +60,38 @@ export const ASSET_PATHS = {
 };
 
 /* -------------------------------------------------------------------------
-   4. CONFIGURATION DE LA QUESTION D'ACCÈS (ROTATION & MÉMORISATION)
-   - GATE_REMEMBER_HOURS : durée (en heures) pendant laquelle l'appareil est mémorisé (24h = 1 jour)
-   - QUESTION_ROTATION_HOURS : durée (en heures) avant de passer à la question suivante
-   - GATE_QUESTIONS : liste des questions et réponses acceptées (insensible aux majuscules/accents)
+   4. CONFIGURATION DES QUESTIONS D'ACCÈS PROGRAMMÉES SUR DÉCEMBRE 2026
+   - Chaque question tombe uniquement à sa date prévue (1, 5, 10, 15, 20 décembre).
+   - Une fois que Clara y a répondu correctement, la question ne lui est plus posée.
    ------------------------------------------------------------------------- */
-export const GATE_REMEMBER_HOURS = 24;
-export const QUESTION_ROTATION_HOURS = 24;
 export const GATE_ADMIN_PASSWORDS = ['alexis', 'admin'];
 // Mots passe-partout permettant d'entrer sur le site quelle que soit la question du jour (insensible à la casse : clara / Clara)
 export const GATE_MASTER_PASSWORDS = ['clara'];
 
 export const GATE_FALLBACK_QUESTION = {
+    id: 'gate_color',
+    scheduledDay: 1,
     question: "Quelle est ma couleur préférée ?",
-    answers: ["bleu"]
+    answers: ["bleu"],
+    customErrors: {
+        "rose": "t'es trop prévisible clara. betchise tout ça supplément mentchise."
+    }
 };
 
 export const GATE_QUESTIONS = [
     {
-        active: true, // Passe à `false` pour désactiver cette question, ou passe les suivantes à `true` au fur et à mesure
+        id: 'gate_color',
+        scheduledDay: 1, // 1er décembre
         question: "Quelle est ma couleur préférée ?",
-        // Mets ici uniquement ta vraie couleur préférée si tu veux restreindre à une seule réponse :
-        answers: [
-            "bleu", "vert", "noir", "rouge", "blanc", "violet",
-            "jaune", "orange", "gris", "marron", "beige", "bordeaux",
-            "marine", "turquoise", "kaki", "corail", "lavande"
-        ],
+        answers: ["bleu"],
         // Messages d'erreur personnalisés pour certaines mauvaises réponses (insensible à la casse)
         customErrors: {
-            "rose": "je savais t'allais répondre ça et c'est FAUX (un peu vrai mais j'assume pas)."
+            "rose": "t'es trop prévisible clara. betchise tout ça supplément mentchise."
         }
     },
     {
-        active: false, // Prête à activer plus tard (passe simplement à `true`)
+        id: 'gate_museum',
+        scheduledDay: 5, // 5 décembre
         question: "Dans quel musée avons nous fait notre première sortie tout les deux ?",
         answers: [
             "musée d'histoire naturelle",
@@ -152,8 +154,46 @@ export const GATE_QUESTIONS = [
             "musee des dinosaures",
             "musee dinosaures"
         ]
+    },
+    {
+        id: 'gate_dish',
+        scheduledDay: 10, // 10 décembre
+        question: "Quel est le plat qu'on a le plus partagé ensemble ?",
+        answers: ["tiramisu"],
+        acceptedKeywords: ["tiramisu"]
+    },
+    {
+        id: 'gate_trip',
+        scheduledDay: 15, // 15 décembre
+        question: "Quel est le voyage ou la randonnée dont on rêve ensemble ?",
+        answers: ["annecy", "pyrenees", "pyrénées"],
+        acceptedKeywords: ["annecy", "pyrenees", "pyrenee"]
+    },
+    {
+        id: 'gate_anniversary',
+        scheduledDay: 20, // 20 décembre
+        question: "En quelle date s'est-on mis ensemble (JJ/MM) ?",
+        answers: [
+            "11/04",
+            "11/04/2006",
+            "11/04/2026",
+            "11 avril",
+            "11 avril 2006",
+            "11 avril 2026",
+            "11/01",
+            "11/01/2026",
+            "11 janvier",
+            "11 janvier 2026"
+        ],
+        acceptedDateVariants: {
+            day: 11,
+            months: [
+                { num: 4, names: ['avril', 'avr'] },
+                { num: 1, names: ['janvier', 'janv', 'jan'] }
+            ],
+            years: ['2006', '06', '2024', '24', '2025', '25', '2026', '26']
+        }
     }
-    // Tu peux ajouter d'autres questions ici qui tourneront toutes les X heures
 ];
 
 /* -------------------------------------------------------------------------
@@ -477,14 +517,8 @@ export const UI_TEXTS = {
     CARD_KICKER_DAY_23: 'Veille de la veille de Noël',
     CARD_KICKER_DAY_24: 'Veille de Noël',
     MODAL_DAY_TITLE: (day) => `${day} Décembre`,
-    SECRET_NOTEBOOK_TITLE: 'Carnet secret • Réponses de Clara',
-    SECRET_NOTEBOOK_LOADING: 'Récupération des réponses de Clara…',
-    SECRET_NOTEBOOK_EMPTY: `
-            <div style="padding:12px 0;color:var(--text-secondary);">
-                Clara n'a pas encore répondu aux quiz.
-                Dès qu'elle cliquera ou écrira une réponse sur son téléphone, tout s'affichera ici !
-            </div>
-        `,
+    DEV_MENU_TITLE: 'Mode Dev',
+    DEV_MENU_QCM_SECTION_TITLE: 'Réponses de Clara au QCM',
     FERRET_GAME: {
         HUD_TITLE: 'Ascension de la dune',
         WIN_TITLE: "Bravo ! Trop forte t'as terminé le jeu",

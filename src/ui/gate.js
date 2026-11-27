@@ -7,10 +7,9 @@
 import { UI_TEXTS } from '../data/calendarData.js';
 import { normalizeAnswer } from '../utils/helpers.js';
 import {
-    getActiveGateQuestion,
-    isGateSessionValid,
-    saveGateSession,
-    clearGateSession,
+    getScheduledGateQuestion,
+    getGatePreviewQuestion,
+    markGateQuestionAnswered,
     isGateAdminPassword,
     isGateAnswerValid,
     getGateCustomError
@@ -28,6 +27,7 @@ import { playMountainIntro } from './intro-montagne.js';
 
 let isGateSubmitBound = false;
 let currentActiveQuestion = null;
+let isPreviewMode = false;
 
 function unlockGateOverlay(instant = false) {
     gateOverlay.style.transition = instant ? 'none' : '';
@@ -36,7 +36,6 @@ function unlockGateOverlay(instant = false) {
 }
 
 function completeGateLogin({ withIntro = false } = {}) {
-    saveGateSession();
     gateError.textContent = '';
     gateInput.blur();
 
@@ -55,10 +54,10 @@ function bindGateFormOnce() {
 
     gateForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const activeQ = currentActiveQuestion || getActiveGateQuestion();
+        const activeQ = currentActiveQuestion || getScheduledGateQuestion() || getGatePreviewQuestion();
         const userVal = normalizeAnswer(gateInput.value);
 
-        // Mot de passe secret pour Alexis s'il veut voir les réponses de Clara dès l'accueil
+        // Mot de passe secret pour Alexis s'il veut ouvrir le Mode Dev dès l'accueil
         if (isGateAdminPassword(userVal)) {
             completeGateLogin({ withIntro: false });
             openSecretAnswersModal();
@@ -66,6 +65,9 @@ function bindGateFormOnce() {
         }
 
         if (isGateAnswerValid(activeQ, userVal)) {
+            if (!isPreviewMode && activeQ && activeQ.id) {
+                markGateQuestionAnswered(activeQ.id);
+            }
             completeGateLogin({ withIntro: true });
         } else {
             gateError.textContent = getGateCustomError(activeQ, userVal) || UI_TEXTS.GATE_ERROR;
@@ -80,10 +82,11 @@ function bindGateFormOnce() {
 export function reopenGate() {
     if (!gateOverlay || !gateForm) return;
 
-    clearGateSession();
     bindGateFormOnce();
 
-    currentActiveQuestion = getActiveGateQuestion();
+    const scheduledQuestion = getScheduledGateQuestion();
+    isPreviewMode = !scheduledQuestion;
+    currentActiveQuestion = scheduledQuestion || getGatePreviewQuestion();
     gateQuestionEl.textContent = currentActiveQuestion.question;
     gateInput.value = '';
     gateError.textContent = '';
@@ -99,12 +102,13 @@ export function initGate() {
 
     bindGateFormOnce();
 
-    // Si l'appareil a déjà répondu correctement dans les dernières 24h, on déverrouille directement
-    if (isGateSessionValid()) {
+    const scheduledQuestion = getScheduledGateQuestion();
+    if (!scheduledQuestion) {
         unlockGateOverlay(true);
         return;
     }
 
-    currentActiveQuestion = getActiveGateQuestion();
+    isPreviewMode = false;
+    currentActiveQuestion = scheduledQuestion;
     gateQuestionEl.textContent = currentActiveQuestion.question;
 }

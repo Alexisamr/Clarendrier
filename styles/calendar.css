@@ -122,6 +122,11 @@
     background-color: rgba(255, 255, 255, 0.6);
 }
 
+.day-card.day-23.locked,
+.day-card.day-24.locked {
+    opacity: 1;
+}
+
 /* Special Card: Day 23 (Veille de la veille de Noël — occupe 2 colonnes) */
 .day-card.day-23 {
     grid-column: span 2;
@@ -268,6 +273,9 @@
     font-size: 1.12rem;
     letter-spacing: 0.04em;
     color: var(--text-secondary);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .footer-christmas-row {

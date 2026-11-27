@@ -10,7 +10,7 @@ import { gridEl } from './dom.js';
 import { showToast } from './toast.js';
 import { openModal } from './modal.js';
 
-function getDay24CardMarkup(day, cardNote) {
+function getDay24CardMarkup(day) {
     return `
                 <svg class="day-24-flank left" width="32" height="38" viewBox="0 0 32 38" fill="none" aria-hidden="true">
                     <path d="M16 4L7 16H12L4 28H13.5V34H18.5V28H28L20 16H25L16 4Z" fill="#2C4A3E" stroke="#C59B5F" stroke-width="0.9"/>
@@ -21,7 +21,6 @@ function getDay24CardMarkup(day, cardNote) {
                 </svg>
                 <span class="day-kicker">${UI_TEXTS.CARD_KICKER_DAY_24}</span>
                 <span class="day-number">${day}</span>
-                ${cardNote ? `<span class="day-empty-label">${cardNote}</span>` : ''}
                 <svg class="day-24-flank right" width="32" height="38" viewBox="0 0 32 38" fill="none" aria-hidden="true">
                     <path d="M16 4L7 16H12L4 28H13.5V34H18.5V28H28L20 16H25L16 4Z" fill="#2C4A3E" stroke="#C59B5F" stroke-width="0.9"/>
                     <circle cx="16" cy="3.5" r="2" fill="#E8D5B5"/>
@@ -32,19 +31,17 @@ function getDay24CardMarkup(day, cardNote) {
             `;
 }
 
-function getDay23CardMarkup(day, cardNote) {
+function getDay23CardMarkup(day) {
     return `
                 <span class="day-kicker">${UI_TEXTS.CARD_KICKER_DAY_23}</span>
                 <span class="day-number">${day}</span>
-                ${cardNote ? `<span class="day-empty-label">${cardNote}</span>` : ''}
             `;
 }
 
-function getStandardCardMarkup(day, cardNote) {
+function getStandardCardMarkup(day) {
     return `
                 <span class="day-kicker">${UI_TEXTS.CARD_KICKER_DEFAULT}</span>
                 <span class="day-number">${day}</span>
-                ${cardNote ? `<span class="day-empty-label">${cardNote}</span>` : ''}
             `;
 }
 
@@ -61,11 +58,10 @@ export function renderGrid() {
         const isChristmasEve = item.day === CALENDAR_CONFIG.CHRISTMAS_EVE_DAY;
         const isPhysical = item.giftKind === 'physical';
         const isEmpty = item.giftKind === 'empty';
-        const cardNote = item.cardNote || '';
 
         if (isDay23) card.classList.add('day-23');
         if (isChristmasEve) card.classList.add('day-24');
-        if (isPhysical) card.classList.add('day-physical');
+        if (isPhysical && isChristmasEve) card.classList.add('day-physical');
         if (isEmpty) card.classList.add('day-empty');
 
         const isOpened = isDayOpened(item.day);
@@ -80,11 +76,11 @@ export function renderGrid() {
         }
 
         if (isChristmasEve) {
-            card.innerHTML = getDay24CardMarkup(item.day, cardNote);
+            card.innerHTML = getDay24CardMarkup(item.day);
         } else if (isDay23) {
-            card.innerHTML = getDay23CardMarkup(item.day, cardNote);
+            card.innerHTML = getDay23CardMarkup(item.day);
         } else {
-            card.innerHTML = getStandardCardMarkup(item.day, cardNote);
+            card.innerHTML = getStandardCardMarkup(item.day);
         }
 
         card.addEventListener('click', () => {

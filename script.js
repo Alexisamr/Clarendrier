@@ -20,6 +20,7 @@ import { initCouponListeners } from './src/ui/coupon.js';
 import { initScratchCardListeners } from './src/ui/scratchCard.js';
 import { initFullscreenGameListeners } from './src/ui/ferretGame.js';
 import { initLuckyWheelListeners } from './src/ui/luckyWheel.js';
+import { initDikdikEasterEgg } from './src/ui/dikdikEasterEgg.js';
 
 initQuizListeners();
 initCouponListeners();
@@ -28,6 +29,7 @@ initFullscreenGameListeners();
 initLuckyWheelListeners();
 initModalAndEscapeListeners();
 initSecretFooterTrigger();
+initDikdikEasterEgg();
 
 initGate();
 renderGrid();

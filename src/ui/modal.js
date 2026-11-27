@@ -19,8 +19,10 @@ import {
     fsScratchOverlay,
     fsCouponOverlay,
     fsQuizOverlay,
-    fsOverlay
+    fsOverlay,
+    fsDikdikOverlay
 } from './dom.js';
+import { closeDikdikFullscreen } from './dikdikEasterEgg.js';
 import { launchFullscreenQuiz, closeFullscreenQuiz } from './quiz.js';
 import { launchFullscreenCoupon, closeFullscreenCoupon } from './coupon.js';
 import {
@@ -330,7 +332,9 @@ export function initModalAndEscapeListeners() {
 
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            if (fsScratchOverlay && fsScratchOverlay.classList.contains('active')) {
+            if (fsDikdikOverlay && fsDikdikOverlay.classList.contains('active')) {
+                closeDikdikFullscreen();
+            } else if (fsScratchOverlay && fsScratchOverlay.classList.contains('active')) {
                 closeFullscreenScratchCard();
             } else if (fsCouponOverlay && fsCouponOverlay.classList.contains('active')) {
                 closeFullscreenCoupon();

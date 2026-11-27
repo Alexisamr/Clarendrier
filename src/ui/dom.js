@@ -12,6 +12,9 @@ export const modalDay = document.getElementById('modal-day');
 export const modalBody = document.getElementById('modal-body');
 export const toastEl = document.getElementById('toast');
 export const footerEl = document.querySelector('.app-footer');
+export const headerSapinBtn = document.getElementById('header-sapin-btn');
+export const fsDikdikOverlay = document.getElementById('fs-dikdik-overlay');
+export const fsDikdikCloseBtn = document.getElementById('fs-dikdik-close-btn');
 
 // Éléments Écran d'accès (Gate)
 export const gateOverlay = document.getElementById('gate-overlay');
